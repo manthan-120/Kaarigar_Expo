@@ -42,7 +42,7 @@ const createCheckoutUrl = (payment) => {
   );
 
   return (
-    `${process.env.PUBLIC_BACKEND_URL}/api/payments/checkout` +
+    `${process.env.RENDER_EXTERNAL_URL}/api/payments/checkout` +
     `?token=${encodeURIComponent(checkoutToken)}`
   );
 };
@@ -212,7 +212,7 @@ const createPaymentOrder = async (req, res) => {
 
       order_meta: {
         return_url:
-          `${process.env.PUBLIC_BACKEND_URL}/api/payments/cashfree-return?order_id={order_id}`,
+          `${process.env.RENDER_EXTERNAL_URL}/api/payments/cashfree-return?order_id={order_id}`,
       },
 
       order_note:

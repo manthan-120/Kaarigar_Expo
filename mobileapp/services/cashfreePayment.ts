@@ -1,4 +1,6 @@
-import * as WebBrowser from "expo-web-browser";
+// 
+
+import * as Linking from "expo-linking";
 
 type PaymentParams = {
   checkoutUrl: string;
@@ -9,8 +11,10 @@ export const openCashfreeCheckout = async ({
   checkoutUrl,
   redirectUrl,
 }: PaymentParams) => {
-  return WebBrowser.openAuthSessionAsync(
-    checkoutUrl,
-    redirectUrl
-  );
+  await Linking.openURL(checkoutUrl);
+
+  return {
+    type: "opened",
+    redirectUrl,
+  };
 };
