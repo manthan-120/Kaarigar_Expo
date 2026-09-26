@@ -119,89 +119,44 @@ export default function KaarigarDashboard() {
     }
   };
 
-  const handlePayment = async (application: Application) => {
+  const handlePayment = async (
+  application: Application
+) => {
   try {
     setPayingApplicationId(application._id);
 
-    // Create or reuse the Cashfree order
-    const order = await api("/payments/create-order", {
-      method: "POST",
-      body: JSON.stringify({
-        eventId: application.event._id,
-        purpose: "KAARIGAR_APPLICATION",
-      }),
-    });
+    const order = await api(
+      "/payments/create-order",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          eventId: application.event._id,
+          purpose: "KAARIGAR_APPLICATION",
+        }),
+      }
+    );
 
-    if (!order.orderId || !order.paymentSessionId) {
+    if (!order.checkoutUrl) {
       throw new Error(
-        "Payment session was not returned by the server."
+        "Checkout URL was not returned by the server."
       );
     }
 
-    console.log("ORDER ID:", order.orderId);
-console.log(
-  "HAS PAYMENT SESSION:",
-  Boolean(order.paymentSessionId)
-);
-console.log(
-  "PAYMENT SESSION LENGTH:",
-  order.paymentSessionId?.length
-);
-console.log(
-  "PAYMENT SESSION PREFIX:",
-  order.paymentSessionId?.slice(0, 15)
-);
-    openCashfreeCheckout({
-      
-      orderId: order.orderId,
-      paymentSessionId: order.paymentSessionId,
-      environment: order.environment,
+    const result =
+      await openCashfreeCheckout({
+        checkoutUrl: order.checkoutUrl,
+        redirectUrl:
+          "mobileapp://payment-result",
+      });
 
-      onSuccess: async (verifiedOrderId) => {
-        try {
-          const result = await api("/payments/verify", {
-            method: "POST",
-            body: JSON.stringify({
-              orderId: verifiedOrderId,
-            }),
-          });
+    console.log(
+      "Cashfree browser result:",
+      result
+    );
 
-          if (result.status === "SUCCESS") {
-            Alert.alert(
-              "Payment Successful",
-              "Your Kaarigar participation payment has been completed."
-            );
+    setPayingApplicationId(null);
 
-            fetchData();
-          } else {
-            Alert.alert(
-              "Payment Pending",
-              "Payment has not been confirmed yet."
-            );
-          }
-        } catch (error) {
-          Alert.alert(
-            "Verification Failed",
-            error instanceof Error
-              ? error.message
-              : "Unable to verify payment."
-          );
-        } finally {
-          setPayingApplicationId(null);
-        }
-      },
-
-      onFailure: (error) => {
-        console.log("Payment failed:", error);
-
-        Alert.alert(
-          "Payment Failed",
-          "The payment was not completed."
-        );
-
-        setPayingApplicationId(null);
-      },
-    });
+    fetchData();
   } catch (error) {
     setPayingApplicationId(null);
 
@@ -213,7 +168,6 @@ console.log(
     );
   }
 };
-
   const getApplicationStatus = (eventId: string) => {
     return applications.find(
       (application) => application.event._id === eventId

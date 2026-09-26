@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 const Event = require("../models/event");
 const Application = require("../models/application");
@@ -25,6 +26,25 @@ const initializeCashfree = async () => {
   }
 
   return cashfree;
+};
+
+const createCheckoutUrl = (payment) => {
+  const checkoutToken = jwt.sign(
+    {
+      paymentId: String(payment._id),
+      userId: String(payment.user),
+      type: "CASHFREE_CHECKOUT",
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "15m",
+    }
+  );
+
+  return (
+    `${process.env.PUBLIC_BACKEND_URL}/api/payments/checkout` +
+    `?token=${encodeURIComponent(checkoutToken)}`
+  );
 };
 
 const createPaymentOrder = async (req, res) => {
@@ -149,7 +169,14 @@ const createPaymentOrder = async (req, res) => {
       status: "PENDING",
     });
 
-    if (existingPayment && existingPayment.cashfreePaymentSessionId) {
+    if (
+      existingPayment &&
+      existingPayment.cashfreePaymentSessionId
+    ) {
+      const checkoutUrl = createCheckoutUrl(
+        existingPayment
+      );
+
       return res.status(200).json({
         message: "Existing pending payment found",
         orderId: existingPayment.cashfreeOrderId,
@@ -158,6 +185,7 @@ const createPaymentOrder = async (req, res) => {
         environment: cashfreeEnvironment(),
         amount: existingPayment.amount,
         currency: existingPayment.currency,
+        checkoutUrl,
       });
     }
 
@@ -182,12 +210,10 @@ const createPaymentOrder = async (req, res) => {
         customer_phone: "9876543210",
         },
 
-      order_meta: process.env.CASHFREE_RETURN_URL
-        ? {
-            return_url:
-              `${process.env.CASHFREE_RETURN_URL}?order_id={order_id}`,
-          }
-        : undefined,
+      order_meta: {
+        return_url:
+          `${process.env.PUBLIC_BACKEND_URL}/api/payments/cashfree-return?order_id={order_id}`,
+      },
 
       order_note:
         purpose === "VISITOR_RSVP"
@@ -222,7 +248,7 @@ const createPaymentOrder = async (req, res) => {
       cashfreePaymentSessionId: paymentSessionId,
       status: "PENDING",
     });
-
+    const checkoutUrl = createCheckoutUrl(payment);
     return res.status(201).json({
       message: "Cashfree order created successfully",
 
@@ -239,6 +265,8 @@ const createPaymentOrder = async (req, res) => {
       currency: "INR",
 
       purpose,
+
+      checkoutUrl,
     });
   } catch (error) {
     console.error(
@@ -256,6 +284,98 @@ const createPaymentOrder = async (req, res) => {
   }
 };
 
+const renderCashfreeCheckout = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res
+        .status(400)
+        .send("Missing checkout token");
+    }
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+
+    if (decoded.type !== "CASHFREE_CHECKOUT") {
+      return res
+        .status(401)
+        .send("Invalid checkout token");
+    }
+
+    const payment = await Payment.findOne({
+      _id: decoded.paymentId,
+      user: decoded.userId,
+    });
+
+    if (!payment) {
+      return res
+        .status(404)
+        .send("Payment not found");
+    }
+
+    if (payment.status === "SUCCESS") {
+      return res
+        .status(400)
+        .send("This payment is already completed.");
+    }
+
+    const mode =
+      process.env.CASHFREE_ENV === "production"
+        ? "production"
+        : "sandbox";
+
+    const paymentSessionId = JSON.stringify(
+      payment.cashfreePaymentSessionId
+    );
+
+    res.type("html").send(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <title>Kaarigar Expo Payment</title>
+
+  <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+</head>
+
+<body>
+  <p>Opening secure payment...</p>
+
+  <script>
+    const cashfree = Cashfree({
+      mode: ${JSON.stringify(mode)}
+    });
+
+    const paymentSessionId =
+      ${paymentSessionId};
+
+    cashfree.checkout({
+      paymentSessionId: paymentSessionId
+    });
+  </script>
+</body>
+</html>
+    `);
+  } catch (error) {
+    console.error(
+      "Cashfree Checkout Page Error:",
+      error
+    );
+
+    return res
+      .status(400)
+      .send(
+        "Invalid or expired checkout session."
+      );
+  }
+};
 const verifyPayment = async (req, res) => {
   try {
     
@@ -387,7 +507,109 @@ const verifyPayment = async (req, res) => {
   }
 };
 
+const cashfreeReturn = async (req, res) => {
+  try {
+    const { order_id } = req.query;
+
+    if (!order_id) {
+      return res.status(400).send("Missing Cashfree order ID");
+    }
+
+    const payment = await Payment.findOne({
+      cashfreeOrderId: order_id,
+    });
+
+    if (!payment) {
+      return res.status(404).send("Payment record not found");
+    }
+
+    const cf = await initializeCashfree();
+
+    let payments = [];
+
+    try {
+      const response = await cf.PGOrderFetchPayments(order_id);
+      payments = response.data || [];
+    } catch (error) {
+      console.error(
+        "Cashfree Return Verification Error:",
+        error?.response?.data || error
+      );
+    }
+
+    let status = "PENDING";
+
+    if (payments.length > 0) {
+      const latestPayment = payments[payments.length - 1];
+
+      const paymentStatus = latestPayment.payment_status;
+
+      if (paymentStatus === "SUCCESS") {
+        payment.status = "SUCCESS";
+
+        payment.cashfreePaymentId = String(
+          latestPayment.cf_payment_id
+        );
+
+        await payment.save();
+
+        if (
+          payment.purpose === "KAARIGAR_APPLICATION" &&
+          payment.application
+        ) {
+          await Application.findByIdAndUpdate(
+            payment.application,
+            {
+              paymentStatus: "PAID",
+            }
+          );
+        }
+
+        if (
+          payment.purpose === "VISITOR_RSVP" &&
+          payment.rsvp
+        ) {
+          await RSVP.findByIdAndUpdate(
+            payment.rsvp,
+            {
+              paymentStatus: "PAID",
+            }
+          );
+        }
+
+        status = "SUCCESS";
+      } else if (
+        paymentStatus === "FAILED" ||
+        paymentStatus === "USER_DROPPED" ||
+        paymentStatus === "CANCELLED"
+      ) {
+        payment.status = "FAILED";
+
+        await payment.save();
+
+        status = "FAILED";
+      }
+    }
+
+    const appUrl =
+      `mobileapp://payment-result` +
+      `?orderId=${encodeURIComponent(order_id)}` +
+      `&status=${encodeURIComponent(status)}`;
+
+    return res.redirect(appUrl);
+  } catch (error) {
+    console.error("Cashfree Return Error:", error);
+
+    return res.status(500).send(
+      "Unable to process payment result."
+    );
+  }
+};
+
+
 module.exports = {
   createPaymentOrder,
-  verifyPayment
+  verifyPayment,
+   renderCashfreeCheckout,
+  cashfreeReturn,
 };
