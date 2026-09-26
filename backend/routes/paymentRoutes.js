@@ -3,6 +3,8 @@ const express = require("express");
 const {
   createPaymentOrder,
   verifyPayment,
+  renderCashfreeCheckout,
+  cashfreeReturn,
 } = require("../controllers/paymentController");
 
 const {
@@ -22,4 +24,14 @@ router.post(
   authMiddleware,
   verifyPayment
 );
+router.get(
+  "/checkout",
+  renderCashfreeCheckout
+);
+
+router.get(
+  "/cashfree-return",
+  cashfreeReturn
+);
+
 module.exports = router;
