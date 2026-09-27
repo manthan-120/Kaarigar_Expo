@@ -5,6 +5,7 @@ const {
   verifyPayment,
   renderCashfreeCheckout,
   cashfreeReturn,
+  getMyPaymentHistory,
 } = require("../controllers/paymentController");
 
 const {
@@ -32,6 +33,12 @@ router.get(
 router.get(
   "/cashfree-return",
   cashfreeReturn
+);
+
+router.get(
+  "/my-history",
+  authMiddleware,
+  getMyPaymentHistory
 );
 
 module.exports = router;

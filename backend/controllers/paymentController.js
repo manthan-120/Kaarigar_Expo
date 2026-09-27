@@ -606,10 +606,40 @@ const cashfreeReturn = async (req, res) => {
   }
 };
 
+const getMyPaymentHistory = async (req, res) => {
+  try {
+    const payments = await Payment.find({
+      user: req.user.userId,
+      purpose: "KAARIGAR_APPLICATION",
+    })
+      .populate("event", "name date location")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      payments: payments.map((payment) => ({
+        paymentId: payment._id,
+        event: payment.event,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        paymentDate: payment.createdAt,
+        cashfreePaymentId: payment.cashfreePaymentId,
+        cashfreeOrderId: payment.cashfreeOrderId,
+      })),
+    });
+  } catch (error) {
+    console.error("Payment History Error:", error);
+
+    return res.status(500).json({
+      message: "Failed to fetch payment history",
+    });
+  }
+};
 
 module.exports = {
   createPaymentOrder,
   verifyPayment,
-   renderCashfreeCheckout,
+  renderCashfreeCheckout,
   cashfreeReturn,
+  getMyPaymentHistory,
 };

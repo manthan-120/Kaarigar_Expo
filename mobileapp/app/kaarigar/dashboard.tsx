@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import ProfileButton from "../../components/ProfileButton";
 import { openCashfreeCheckout } from "../../services/cashfreePayment";
+import PaymentHistoryCard from "../../components/PaymentHistoryCard";
 import {
   ActivityIndicator,
   Alert,
@@ -45,13 +46,15 @@ export default function KaarigarDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [applyingEventId, setApplyingEventId] = useState<string | null>(null);
   const [payingApplicationId, setPayingApplicationId] = useState<string | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const { user} = useAuth();
 
   const fetchData = async () => {
     try {
-      const [eventsData, applicationsData] = await Promise.all([
+      const [eventsData, applicationsData, paymentHistoryData] = await Promise.all([
         api("/events"),
         api("/applications/my"),
+        api("/payments/my-history"),
       ]);
 
       const upcomingEvents = eventsData.events.filter(
@@ -60,6 +63,7 @@ export default function KaarigarDashboard() {
 
       setEvents(upcomingEvents);
       setApplications(applicationsData.applications);
+      setPaymentHistory(paymentHistoryData.payments);
     } catch (error) {
       Alert.alert(
         "Error",
@@ -142,21 +146,41 @@ export default function KaarigarDashboard() {
       );
     }
 
-    const result =
-      await openCashfreeCheckout({
-        checkoutUrl: order.checkoutUrl,
-        redirectUrl:
-          "mobileapp://payment-result",
-      });
+   const result = await openCashfreeCheckout({
+    checkoutUrl: order.checkoutUrl,
+    redirectUrl: "mobileapp://payment-result",
+  });
 
-    console.log(
-      "Cashfree browser result:",
-      result
+  console.log("Cashfree payment result:", result);
+
+  const verification = await api("/payments/verify", {
+    method: "POST",
+    body: JSON.stringify({
+      orderId: result.orderId,
+    }),
+  });
+
+  console.log("Cashfree verification:", verification);
+
+  if (verification.status === "SUCCESS") {
+    Alert.alert(
+      "Payment Successful",
+      "Your application payment has been completed."
     );
+  } else if (verification.status === "PENDING") {
+    Alert.alert(
+      "Payment Pending",
+      "Payment is still being processed. Please refresh shortly."
+    );
+  } else {
+    Alert.alert(
+      "Payment Failed",
+      "The payment was not completed."
+    );
+  }
 
-    setPayingApplicationId(null);
-
-    fetchData();
+  setPayingApplicationId(null);
+  fetchData();
   } catch (error) {
     setPayingApplicationId(null);
 
@@ -290,6 +314,25 @@ export default function KaarigarDashboard() {
               </View>
             );
           })
+        )}
+
+        <Text className="mb-4 mt-9 text-[20px] font-bold text-[#3B2923]">
+          Payment History
+        </Text>
+
+        {paymentHistory.length === 0 ? (
+          <View className="rounded-[16px] bg-white p-5">
+            <Text className="text-center text-[#75665E]">
+              No payments yet.
+            </Text>
+          </View>
+        ) : (
+          paymentHistory.map((payment) => (
+            <PaymentHistoryCard
+              key={payment.paymentId}
+              payment={payment}
+            />
+          ))
         )}
       </ScrollView>
     </View>
