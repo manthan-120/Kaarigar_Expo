@@ -608,11 +608,35 @@ const cashfreeReturn = async (req, res) => {
 
 const getMyPaymentHistory = async (req, res) => {
   try {
-    const payments = await Payment.find({
+    const { purpose } = req.query;
+
+    const allowedPurposes = [
+      "VISITOR_RSVP",
+      "KAARIGAR_APPLICATION",
+    ];
+
+    if (
+      purpose &&
+      !allowedPurposes.includes(purpose)
+    ) {
+      return res.status(400).json({
+        message: "Invalid payment purpose",
+      });
+    }
+
+    const filter = {
       user: req.user.userId,
-      purpose: "KAARIGAR_APPLICATION",
-    })
-      .populate("event", "name date location")
+    };
+
+    if (purpose) {
+      filter.purpose = purpose;
+    }
+
+    const payments = await Payment.find(filter)
+      .populate(
+        "event",
+        "name date location"
+      )
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -622,13 +646,19 @@ const getMyPaymentHistory = async (req, res) => {
         amount: payment.amount,
         currency: payment.currency,
         status: payment.status,
+        purpose: payment.purpose,
         paymentDate: payment.createdAt,
-        cashfreePaymentId: payment.cashfreePaymentId,
-        cashfreeOrderId: payment.cashfreeOrderId,
+        cashfreePaymentId:
+          payment.cashfreePaymentId,
+        cashfreeOrderId:
+          payment.cashfreeOrderId,
       })),
     });
   } catch (error) {
-    console.error("Payment History Error:", error);
+    console.error(
+      "Payment History Error:",
+      error
+    );
 
     return res.status(500).json({
       message: "Failed to fetch payment history",

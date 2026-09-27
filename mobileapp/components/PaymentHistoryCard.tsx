@@ -9,8 +9,10 @@ type PaymentHistoryCardProps = {
     };
     amount: number;
     status: string;
+    purpose?: "VISITOR_RSVP" | "KAARIGAR_APPLICATION";
     paymentDate: string;
     cashfreePaymentId?: string;
+    cashfreeOrderId?: string;
   };
 };
 
@@ -28,7 +30,9 @@ export default function PaymentHistoryCard({
       </Text>
 
       <Text className="mt-2 text-[#75665E]">
-        Kaarigar Participation Fee
+        {payment.purpose === "VISITOR_RSVP"
+            ? "Event Registration Fee"
+            : "Kaarigar Participation Fee"}
       </Text>
 
       <Text className="mt-3 text-[20px] font-bold text-[#C65D3A]">
