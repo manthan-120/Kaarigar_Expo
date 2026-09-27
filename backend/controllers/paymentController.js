@@ -47,6 +47,32 @@ const createCheckoutUrl = (payment) => {
   );
 };
 
+const completeVisitorRsvp = async (payment) => {
+  if (payment.purpose !== "VISITOR_RSVP") {
+    return;
+  }
+
+  const rsvp = await RSVP.findOneAndUpdate(
+    {
+      event: payment.event,
+      visitor: payment.user,
+    },
+    {
+      $set: {
+        status: "REGISTERED",
+        paymentStatus: "PAID",
+      },
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true,
+    }
+  );
+
+  payment.rsvp = rsvp._id;
+};
+
 const createPaymentOrder = async (req, res) => {
   try {
     const { eventId, purpose } = req.body;
@@ -99,20 +125,7 @@ const createPaymentOrder = async (req, res) => {
         visitor: req.user.userId,
       });
 
-      if (!rsvp) {
-        return res.status(400).json({
-          message:
-            "Please register for the event before making payment.",
-        });
-      }
-
-      if (rsvp.status === "CANCELLED") {
-        return res.status(400).json({
-          message: "This RSVP has been cancelled.",
-        });
-      }
-
-      if (rsvp.paymentStatus === "PAID") {
+      if (rsvp?.paymentStatus === "PAID") {
         return res.status(400).json({
           message: "This event is already paid for.",
         });
@@ -442,14 +455,8 @@ const verifyPayment = async (req, res) => {
       await payment.save();
 
       // Update linked RSVP/Application
-      if (
-        payment.purpose === "VISITOR_RSVP" &&
-        payment.rsvp
-      ) {
-        await RSVP.findByIdAndUpdate(payment.rsvp, {
-          paymentStatus: "PAID",
-        });
-      }
+      await completeVisitorRsvp(payment);
+      await payment.save();
 
       if (
         payment.purpose === "KAARIGAR_APPLICATION" &&
@@ -565,17 +572,8 @@ const cashfreeReturn = async (req, res) => {
           );
         }
 
-        if (
-          payment.purpose === "VISITOR_RSVP" &&
-          payment.rsvp
-        ) {
-          await RSVP.findByIdAndUpdate(
-            payment.rsvp,
-            {
-              paymentStatus: "PAID",
-            }
-          );
-        }
+        await completeVisitorRsvp(payment);
+        await payment.save();
 
         status = "SUCCESS";
       } else if (

@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { api } from "../../services/api";
+import { openCashfreeCheckout } from "../../services/cashfreePayment";
 
 type Event = {
   _id: string;
@@ -30,23 +31,39 @@ type Kaarigar = {
   description?: string;
 };
 
+type RSVP = {
+  _id: string;
+  status: "REGISTERED" | "CANCELLED";
+  paymentStatus: "PENDING" | "PAID" | "REFUNDED";
+  event: {
+    _id: string;
+  };
+};
+
 export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [kaarigars, setKaarigars] = useState<Kaarigar[]>([]);
+  const [rsvp, setRsvp] = useState<RSVP | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
 
   const fetchEventDetails = async () => {
     try {
-      const [eventData, kaarigarData] = await Promise.all([
+      const [eventData, kaarigarData, rsvpData] = await Promise.all([
         api(`/events/${id}`),
         api(`/events/${id}/kaarigars`),
+        api("/rsvps/my"),
       ]);
 
       setEvent(eventData.event);
       setKaarigars(kaarigarData.kaarigars);
+      setRsvp(
+        (rsvpData.rsvps || []).find(
+          (item: RSVP) => item.event?._id === id
+        ) || null
+      );
     } catch (error) {
       Alert.alert(
         "Error",
@@ -69,17 +86,58 @@ export default function EventDetailsScreen() {
     try {
       setRegistering(true);
 
-      await api("/rsvps", {
-        method: "POST",
-        body: JSON.stringify({
-          eventId: event._id,
-        }),
-      });
+      if (event.visitorFee <= 0) {
+        await api("/rsvps", {
+          method: "POST",
+          body: JSON.stringify({
+            eventId: event._id,
+          }),
+        });
+      } else {
+        const order = await api("/payments/create-order", {
+          method: "POST",
+          body: JSON.stringify({
+            eventId: event._id,
+            purpose: "VISITOR_RSVP",
+          }),
+        });
+
+        if (!order.checkoutUrl) {
+          throw new Error(
+            "Checkout URL was not returned by the server."
+          );
+        }
+
+        const result = await openCashfreeCheckout({
+          checkoutUrl: order.checkoutUrl,
+          redirectUrl: "mobileapp://payment-result",
+        });
+
+        const verification = await api("/payments/verify", {
+          method: "POST",
+          body: JSON.stringify({
+            orderId: result.orderId,
+          }),
+        });
+
+        if (verification.status !== "SUCCESS") {
+          Alert.alert(
+            verification.status === "PENDING"
+              ? "Payment Pending"
+              : "Payment Failed",
+            verification.status === "PENDING"
+              ? "Your payment is still being processed."
+              : "The payment was not completed."
+          );
+          return;
+        }
+      }
 
       Alert.alert(
         "Registration Successful",
         "You have successfully registered for this event."
       );
+      await fetchEventDetails();
     } catch (error) {
       Alert.alert(
         "Registration Failed",
@@ -117,6 +175,10 @@ export default function EventDetailsScreen() {
       </View>
     );
   }
+
+  const isRegistered =
+    rsvp?.status === "REGISTERED" &&
+    rsvp.paymentStatus === "PAID";
 
   return (
     <ScrollView
@@ -163,11 +225,19 @@ export default function EventDetailsScreen() {
 
       <TouchableOpacity
         onPress={handleRegister}
-        disabled={registering}
+        disabled={registering || isRegistered}
         className="mt-6 items-center rounded-[14px] bg-[#C65D3A] py-4"
       >
         <Text className="text-[16px] font-bold text-white">
-          {registering ? "Registering..." : "Register for Event"}
+          {isRegistered
+            ? "Registered"
+            : registering
+              ? event.visitorFee > 0
+                ? "Processing Payment..."
+                : "Registering..."
+              : event.visitorFee > 0
+                ? "Pay & Register"
+                : "Register for Event"}
         </Text>
       </TouchableOpacity>
 

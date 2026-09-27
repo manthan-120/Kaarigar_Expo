@@ -295,8 +295,11 @@ export default function VisitorDashboard() {
           </View>
         ) : (
           registrations.map((rsvp) => {
-            const fee =
-              rsvp.event?.visitorFee ?? 0;
+            const eventDetails = events.find(
+              (event) => event._id === rsvp.event._id
+            );
+
+            const fee = eventDetails?.visitorFee ?? 0;
 
             const isPaid =
               rsvp.paymentStatus === "PAID";

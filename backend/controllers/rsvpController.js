@@ -31,6 +31,7 @@ const registerForEvent = async (req, res) => {
     const rsvp = await RSVP.create({
       event: eventId,
       visitor: req.user.userId,
+      paymentStatus: event.visitorFee > 0 ? "PENDING" : "PAID",
     });
 
     res.status(201).json({
@@ -50,7 +51,10 @@ const getMyRSVPs = async (req, res) => {
     const rsvps = await RSVP.find({
       visitor: req.user.userId,
     })
-      .populate("event", "name date location description")
+      .populate(
+        "event",
+        "name date location description visitorFee"
+      )
       .sort({ createdAt: -1 });
 
     res.json({
