@@ -1,10 +1,43 @@
 const Event = require("../models/event");
 const Application = require("../models/application");
+const cloudinary = require("../config/cloudinary");
 
 // Create event
 const createEvent = async (req, res) => {
   try {
-    const { name, date, location, description, visitorFee, kaarigarFee } = req.body;
+    const {
+      name,
+      date,
+      location,
+      description,
+      visitorFee,
+      kaarigarFee,
+    } = req.body;
+
+    let imageUrl = "";
+
+    // Upload image to Cloudinary if an image was selected
+    if (req.file) {
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "kaarigar-expo/events",
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          }
+        );
+
+        stream.end(req.file.buffer);
+      });
+
+      imageUrl = uploadResult.secure_url;
+    }
 
     const event = await Event.create({
       name,
@@ -13,6 +46,7 @@ const createEvent = async (req, res) => {
       description,
       visitorFee,
       kaarigarFee,
+      image: imageUrl,
       createdBy: req.user.userId,
     });
 

@@ -7,12 +7,23 @@ const {
   getEventKaarigars,
 } = require("../controllers/eventController");
 
-const {authMiddleware,authorizeRoles} = require("../middleware/authMiddleware");
+const {
+  authMiddleware,
+  authorizeRoles,
+} = require("../middleware/authMiddleware");
+
+const upload = require("../middleware/upload");
 
 const router = express.Router();
 
 // Create event
-router.post("/", authMiddleware, authorizeRoles("ADMIN"), createEvent);
+router.post(
+  "/",
+  authMiddleware,
+  authorizeRoles("ADMIN"),
+  upload.single("image"),
+  createEvent
+);
 
 // Get all events
 router.get("/", getEvents);
