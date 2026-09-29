@@ -1,18 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AdminStatCard from "../components/AdminStatCard";
+import EventCard from "../components/EventCard";
 import { api } from "../services/api";
-
-type Event = {
-  _id: string;
-  name: string;
-  date: string;
-  location: string;
-  description?: string;
-  visitorFee: number;
-  kaarigarFee: number;
-  image?: string;
-};
+import { useEvents } from "../hooks/useEvents";
 
 type Application = {
   _id: string;
@@ -51,21 +43,15 @@ type Visitor = {
 export default function Admin() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-
-  const [events, setEvents] = useState<Event[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [visitors, setVisitors] = useState<Visitor[]>([]);
-
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [applicationLoading, setApplicationLoading] = useState<string | null>(
     null
   );
   const [visitorLoading, setVisitorLoading] = useState(false);
-
   const [showCreateEvent, setShowCreateEvent] = useState(false);
-
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventLocation, setEventLocation] = useState("");
@@ -77,6 +63,12 @@ export default function Admin() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const visitorSectionRef = useRef<HTMLElement>(null);
+  const {
+  events,
+  loading: eventsLoading,
+  error: eventsError,
+  refetch: refetchEvents,
+} = useEvents();
 
   useEffect(() => {
     if (!user) {
@@ -108,12 +100,8 @@ export default function Admin() {
       setLoading(true);
       setError("");
 
-      const [eventsData, applicationsData] = await Promise.all([
-        api("/events"),
-        api("/applications"),
-      ]);
+      const applicationsData = await api("/applications");
 
-      setEvents(eventsData.events || []);
       setApplications(applicationsData.applications || []);
     } catch (err) {
       setError(
@@ -175,6 +163,7 @@ export default function Admin() {
             setShowCreateEvent(false);
 
             await fetchDashboard();
+            await refetchEvents();
         } catch (err) {
             setError(
             err instanceof Error ? err.message : "Failed to create event"
@@ -250,7 +239,7 @@ export default function Admin() {
     (application) => application.status === "APPROVED"
   );
 
-  if (loading) {
+  if (loading||eventsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fff8ef]">
         <p className="text-[#75665e]">Loading admin dashboard...</p>
@@ -299,39 +288,35 @@ export default function Admin() {
           </div>
         )}
 
-        {error && (
+        {(error||eventsError) && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+            {error||eventsError}
           </div>
         )}
 
         {/* Statistics */}
         <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">Total Events</p>
-            <p className="mt-2 text-3xl font-bold">{events.length}</p>
-          </div>
+          <AdminStatCard
+            title="Total Events"
+            value={events.length}
+          />
 
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">Applications</p>
-            <p className="mt-2 text-3xl font-bold">
-              {applications.length}
-            </p>
-          </div>
+          <AdminStatCard
+            title="Applications"
+            value={applications.length}
+          />
 
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">Pending</p>
-            <p className="mt-2 text-3xl font-bold text-amber-600">
-              {pendingApplications.length}
-            </p>
-          </div>
+          <AdminStatCard
+            title="Pending"
+            value={pendingApplications.length}
+            valueClassName="text-amber-600"
+          />
 
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">Approved</p>
-            <p className="mt-2 text-3xl font-bold text-green-600">
-              {approvedApplications.length}
-            </p>
-          </div>
+          <AdminStatCard
+            title="Approved"
+            value={approvedApplications.length}
+            valueClassName="text-green-600"
+          />
         </section>
 
         {/* Create Event */}
@@ -486,50 +471,31 @@ export default function Admin() {
                 No events available.
               </div>
             ) : (
-              events.map((event) => (
-                <div
-                  key={event._id}
-                  className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm"
-                >
-                  {event.image ? (
-                    <img
-                      src={event.image}
-                      alt={event.name}
-                      className="mb-5 h-40 w-full rounded-xl object-cover"
-                    />
-                  ) : null}
-
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <h3 className="font-['Playfair_Display'] text-xl font-bold">
-                      {event.name}
-                    </h3>
-
-                    <span className="rounded-full bg-[#c65d3a]/10 px-3 py-1 text-xs font-bold text-[#c65d3a]">
-                      ₹{event.visitorFee}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 text-sm text-[#75665e]">
-                    <p>📅 {new Date(event.date).toLocaleDateString()}</p>
-                    <p>📍 {event.location}</p>
-                    <p>🎨 Kaarigar Fee: ₹{event.kaarigarFee}</p>
-                  </div>
-
-                  {event.description && (
-                    <p className="mt-4 text-sm leading-6 text-[#75665e]">
-                      {event.description}
-                    </p>
-                  )}
-
-                  <button
-                    onClick={() => handleViewVisitors(event._id)}
-                    className="mt-5 w-full rounded-lg border border-[#c65d3a] px-4 py-3 text-sm font-semibold text-[#c65d3a] transition hover:bg-[#c65d3a] hover:text-white"
-                  >
-                    View Registered Visitors
-                  </button>
-                </div>
-              ))
-            )}
+                events.map((event) => (
+                  <EventCard
+                    key={event._id}
+                    id={event._id}
+                    title={event.name}
+                    location={event.location}
+                    date={new Date(event.date).toLocaleDateString()}
+                    visitorFee={event.visitorFee}
+                    kaarigarFee={event.kaarigarFee}
+                    role="ADMIN"
+                    description={
+                      event.description || "Discover this upcoming exhibition."
+                    }
+                    image={event.image}
+                    footer={
+                      <button
+                        onClick={() => handleViewVisitors(event._id)}
+                        className="mt-6 w-full rounded-lg border border-[#c65d3a] px-4 py-3 text-sm font-semibold text-[#c65d3a] transition hover:bg-[#c65d3a] hover:text-white"
+                      >
+                        View Registered Visitors
+                      </button>
+                    }
+                  />
+                ))
+              )}
           </div>
         </section>
 

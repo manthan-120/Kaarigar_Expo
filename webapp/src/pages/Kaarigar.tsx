@@ -5,17 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { payWithCashfree } from "../services/payment";
 import EventCard from "../components/EventCard";
-
-type Event = {
-  _id: string;
-  name: string;
-  date: string;
-  location: string;
-  description?: string;
-  visitorFee: number;
-  kaarigarFee: number;
-  image?: string;
-};
+import { useEvents } from "../hooks/useEvents";
 
 type Application = {
   _id: string;
@@ -46,15 +36,17 @@ type Application = {
 export default function Kaarigar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-
-  const [events, setEvents] = useState<Event[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
   const [paying, setPaying] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const {
+  events,
+  loading: eventsLoading,
+  error: eventsError,
+} = useEvents();
 
   useEffect(() => {
     if (!user) {
@@ -75,12 +67,8 @@ export default function Kaarigar() {
       setLoading(true);
       setError("");
 
-      const [eventsData, applicationsData] = await Promise.all([
-        api("/events"),
-        api("/applications/my"),
-      ]);
+      const applicationsData = await api("/applications/my");
 
-      setEvents(eventsData.events || []);
       setApplications(applicationsData.applications || []);
     } catch (err) {
       setError(
@@ -179,7 +167,7 @@ export default function Kaarigar() {
     (application) => application.status === "REJECTED"
   );
 
-  if (loading) {
+  if (loading||eventsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fff8ef]">
         <p className="text-[#75665e]">
@@ -245,9 +233,9 @@ export default function Kaarigar() {
           </div>
         )}
 
-        {error && (
+        {(error||eventsError) && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+            {error||eventsError}
           </div>
         )}
 

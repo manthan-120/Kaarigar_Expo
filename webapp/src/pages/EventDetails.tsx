@@ -3,17 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { payWithCashfree } from "../services/payment";
-
-type Event = {
-  _id: string;
-  name: string;
-  date: string;
-  location: string;
-  description?: string;
-  visitorFee: number;
-  kaarigarFee: number;
-  image?: string;
-};
+import type { Event } from "../types/event";
 
 type Kaarigar = {
   _id: string;

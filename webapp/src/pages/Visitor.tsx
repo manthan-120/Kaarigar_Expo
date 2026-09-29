@@ -1,19 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useEvents } from "../hooks/useEvents";
 import { api } from "../services/api";
 import EventCard from "../components/EventCard";
-
-type Event = {
-  _id: string;
-  name: string;
-  date: string;
-  location: string;
-  description?: string;
-  visitorFee: number;
-  kaarigarFee: number;
-  image?: string;
-};
 
 type Registration = {
   _id: string;
@@ -42,8 +32,12 @@ type Registration = {
 export default function Visitor() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const {
+  events,
+  loading: eventsLoading,
+  error: eventsError,
+  } = useEvents();
 
-  const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -67,13 +61,8 @@ export default function Visitor() {
     try {
       setLoading(true);
       setError("");
+      const registrationsData = await api("/rsvps/my");
 
-      const [eventsData, registrationsData] = await Promise.all([
-        api("/events"),
-        api("/rsvps/my"),
-      ]);
-
-      setEvents(eventsData.events || []);
       setRegistrations(registrationsData.rsvps || []);
     } catch (err) {
       setError(
@@ -91,7 +80,7 @@ export default function Visitor() {
     navigate("/login");
   };
 
-  if (loading) {
+  if (loading||eventsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fff8ef]">
         <p className="text-[#75665e]">
@@ -141,9 +130,9 @@ export default function Visitor() {
       <main className="mx-auto max-w-7xl px-6 py-8">
 
         {/* ================= ERROR ================= */}
-        {error && (
+        {(error||eventsError) && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+            {error||eventsError}
           </div>
         )}
 

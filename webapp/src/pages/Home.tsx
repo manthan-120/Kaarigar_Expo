@@ -1,39 +1,10 @@
-import { useEffect, useState } from "react";
-import { api } from "../services/api";
 import EventCard from "../components/EventCard";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-type Event = {
-  _id: string;
-  name: string;
-  date: string;
-  location: string;
-  description?: string;
-  visitorFee: number;
-  kaarigarFee: number;
-  image?: string;
-};
-
+import { useEvents } from "../hooks/useEvents";
 export default function Home() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(true);
   const { user, logout } = useAuth();
-
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const data = await api("/events");
-        setEvents(data.events);
-      } catch (error) {
-        console.error("Failed to load events:", error);
-      } finally {
-        setLoadingEvents(false);
-      }
-    };
-
-    fetchEvents();
-  }, []);
+  const { events, loading: loadingEvents } = useEvents();
 
   const scrollToEvents = () => {
     document
