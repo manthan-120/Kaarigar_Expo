@@ -22,8 +22,23 @@ const registerForEvent = async (req, res) => {
     });
 
     if (existingRSVP) {
-      return res.status(400).json({
-        message: "You are already registered for this event",
+      if (
+        existingRSVP.status === "REGISTERED" &&
+        existingRSVP.paymentStatus === "PAID"
+      ) {
+        return res.status(400).json({
+          message: "You are already registered for this event",
+        });
+      }
+
+      existingRSVP.status = "REGISTERED";
+      existingRSVP.paymentStatus =
+        event.visitorFee > 0 ? "PENDING" : "PAID";
+      await existingRSVP.save();
+
+      return res.status(200).json({
+        message: "Event registration resumed",
+        rsvp: existingRSVP,
       });
     }
 

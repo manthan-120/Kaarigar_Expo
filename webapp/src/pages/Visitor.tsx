@@ -20,13 +20,6 @@ type Registration = {
   status?: string;
   paymentStatus?: string;
 
-  payment?: {
-    orderId?: string;
-    paymentId?: string;
-    amount?: number;
-    status?: string;
-  };
-
   createdAt?: string;
 };
 
@@ -164,7 +157,7 @@ export default function Visitor() {
               {
                 registrations.filter(
                   (registration) =>
-                    registration.status === "REGISTERED" ||
+                    registration.status === "REGISTERED" &&
                     registration.paymentStatus === "PAID"
                 ).length
               }
@@ -261,9 +254,7 @@ export default function Visitor() {
                     registration.status || "REGISTERED";
 
                   const paymentStatus =
-                    registration.paymentStatus ||
-                    registration.payment?.status ||
-                    "PENDING";
+                    registration.paymentStatus || "PENDING";
 
                   return (
                     <div

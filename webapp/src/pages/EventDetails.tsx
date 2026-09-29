@@ -16,6 +16,12 @@ type Kaarigar = {
   description?: string;
 };
 
+type VisitorRegistration = {
+  event: string | { _id: string };
+  status?: string;
+  paymentStatus?: string;
+};
+
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -25,6 +31,8 @@ export default function EventDetails() {
   const [kaarigars, setKaarigars] = useState<Kaarigar[]>([]);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [visitorRegistration, setVisitorRegistration] =
+    useState<VisitorRegistration | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -33,13 +41,33 @@ export default function EventDetails() {
       try {
         if (!id) return;
 
-        const [eventData, kaarigarData] = await Promise.all([
+        const requests = [
           api(`/events/${id}`),
           api(`/events/${id}/kaarigars`),
-        ]);
+        ];
+
+        if (user?.role === "VISITOR") {
+          requests.push(api("/rsvps/my"));
+        }
+
+        const [eventData, kaarigarData, registrationsData] =
+          await Promise.all(requests);
 
         setEvent(eventData.event);
         setKaarigars(kaarigarData.kaarigars || []);
+
+        if (registrationsData) {
+          const registration = (registrationsData.rsvps || []).find(
+            (item: VisitorRegistration) => {
+              const eventId =
+                typeof item.event === "string"
+                  ? item.event
+                  : item.event?._id;
+              return eventId === id;
+            }
+          );
+          setVisitorRegistration(registration || null);
+        }
       } catch (error) {
         console.error("Failed to load event:", error);
       } finally {
@@ -48,7 +76,7 @@ export default function EventDetails() {
     };
 
     fetchEventDetails();
-  }, [id]);
+  }, [id, user?.role]);
 
   const handleRegistration = async () => {
     if (!event || !user) return;
@@ -59,11 +87,6 @@ export default function EventDetails() {
       setError("");
 
       if (user.role === "VISITOR") {
-        await api("/rsvps", {
-          method: "POST",
-          body: JSON.stringify({ eventId: event._id }),
-        });
-
         if (event.visitorFee > 0) {
           const payment = await payWithCashfree(
             event._id,
@@ -78,9 +101,22 @@ export default function EventDetails() {
             );
             return;
           }
+
+          navigate("/visitor");
+          return;
         }
 
-        setMessage("Event registration and payment completed successfully.");
+        await api("/rsvps", {
+          method: "POST",
+          body: JSON.stringify({ eventId: event._id }),
+        });
+
+        setMessage("Event registration completed successfully.");
+        setVisitorRegistration({
+          event: event._id,
+          status: "REGISTERED",
+          paymentStatus: "PAID",
+        });
         return;
       }
 
@@ -334,16 +370,30 @@ export default function EventDetails() {
                 </p>
               )}
 
+              {user?.role === "VISITOR" && visitorRegistration && (
+                <div className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+                  Registration: {visitorRegistration.status || "REGISTERED"}
+                  <br />
+                  Payment: {visitorRegistration.paymentStatus || "PENDING"}
+                </div>
+              )}
+
               {(user?.role === "VISITOR" || user?.role === "KAARIGAR") && (
                 <button
                   onClick={handleRegistration}
-                  disabled={registering}
+                  disabled={
+                    registering ||
+                    (user?.role === "VISITOR" &&
+                      visitorRegistration?.paymentStatus === "PAID")
+                  }
                   className="mt-6 w-full rounded-lg bg-[#c65d3a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b45131] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {registering
                     ? "Processing..."
                     : user?.role === "VISITOR"
-                      ? event.visitorFee > 0
+                      ? visitorRegistration?.paymentStatus === "PAID"
+                        ? "Already Registered"
+                        : event.visitorFee > 0
                         ? "Register & Pay"
                         : "Register for Event"
                       : "Apply for Event"}
