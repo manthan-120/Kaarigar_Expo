@@ -66,14 +66,6 @@ const completeVisitorRsvp = async (payment) => {
     return;
   }
 
-  /*
-    IMPORTANT:
-
-    RSVP is created/updated ONLY after payment becomes SUCCESS.
-
-    Failed and pending payments never reach this function.
-  */
-
   const rsvp = await RSVP.findOneAndUpdate(
     {
       event: payment.event,
@@ -109,8 +101,9 @@ const getCashfreePaymentStatus = async (orderId) => {
   /*
     Cashfree may temporarily return no payment records
     immediately after checkout.
-  */
 
+    Treat that as PENDING instead of an error.
+  */
   if (payments.length === 0) {
     return {
       status: "PENDING",
@@ -118,62 +111,31 @@ const getCashfreePaymentStatus = async (orderId) => {
     };
   }
 
-  /*
-    IMPORTANT:
+  // Latest payment attempt
+  const latestPayment = payments[payments.length - 1];
 
-    One Cashfree order can have multiple payment attempts.
+  const cashfreeStatus = latestPayment.payment_status;
 
-    Example:
-
-    Attempt 1 -> FAILED
-    Attempt 2 -> SUCCESS
-
-    We must consider the entire order SUCCESS
-    if ANY payment attempt is SUCCESS.
-  */
-
-  const successfulPayment = payments.find(
-    (payment) =>
-      payment.payment_status === "SUCCESS"
-  );
-
-  if (successfulPayment) {
+  if (cashfreeStatus === "SUCCESS") {
     return {
       status: "SUCCESS",
-      payment: successfulPayment,
+      payment: latestPayment,
     };
   }
 
-  /*
-    If there is a pending/not-attempted payment,
-    keep the order pending.
-  */
-
-  const pendingPayment = payments.find(
-    (payment) =>
-      payment.payment_status === "NOT_ATTEMPTED" ||
-      payment.payment_status === "PENDING"
-  );
-
-  if (pendingPayment) {
+  if (
+    cashfreeStatus === "FAILED" ||
+    cashfreeStatus === "CANCELLED" ||
+    cashfreeStatus === "USER_DROPPED"
+  ) {
     return {
-      status: "PENDING",
-      payment: pendingPayment,
+      status: "FAILED",
+      payment: latestPayment,
     };
   }
-
-  /*
-    No successful or pending attempt exists.
-
-    Use the latest payment attempt to get failure
-    information.
-  */
-
-  const latestPayment =
-    payments[payments.length - 1];
 
   return {
-    status: "FAILED",
+    status: "PENDING",
     payment: latestPayment,
   };
 };
@@ -183,9 +145,7 @@ const getCashfreePaymentStatus = async (orderId) => {
 ========================================================= */
 
 const sleep = (ms) =>
-  new Promise((resolve) =>
-    setTimeout(resolve, ms)
-  );
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /* =========================================================
    VERIFY CASHFREE PAYMENT WITH RETRIES
@@ -201,16 +161,9 @@ const verifyCashfreePaymentWithRetry = async (
     payment: null,
   };
 
-  for (
-    let attempt = 1;
-    attempt <= attempts;
-    attempt++
-  ) {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      lastResult =
-        await getCashfreePaymentStatus(
-          orderId
-        );
+      lastResult = await getCashfreePaymentStatus(orderId);
 
       console.log(
         `Cashfree verification attempt ${attempt}/${attempts}:`,
@@ -227,10 +180,14 @@ const verifyCashfreePaymentWithRetry = async (
     } catch (error) {
       console.error(
         `Cashfree verification attempt ${attempt} failed:`,
-        error?.response?.data ||
-          error?.message ||
-          error
+        error?.response?.data || error?.message || error
       );
+
+      /*
+        If this is the last attempt, let the caller handle
+        the error/pending state.
+        Otherwise retry.
+      */
     }
 
     if (attempt < attempts) {
@@ -250,43 +207,40 @@ const finalizeSuccessfulPayment = async (
   cashfreePayment = null
 ) => {
   /*
-    This function is intentionally idempotent.
+    Always make this operation safe to call multiple times.
 
-    It is safe if called multiple times from:
-    - /payments/verify
-    - /payments/reconcile
-    - Cashfree return URL
+    This is important because:
+    - verify can be called multiple times
+    - reconcile can be called later
+    - Cashfree return URL can also run
   */
 
   payment.status = "SUCCESS";
 
   if (cashfreePayment?.cf_payment_id) {
-    payment.cashfreePaymentId =
-      String(
-        cashfreePayment.cf_payment_id
-      );
+    payment.cashfreePaymentId = String(
+      cashfreePayment.cf_payment_id
+    );
   }
 
   /*
-    Save successful payment first.
+    Save Payment first so the successful payment is
+    persisted even if the related RSVP/application
+    update takes a little longer.
   */
-
   await payment.save();
 
   /* -----------------------------------------------
      VISITOR
   ------------------------------------------------ */
 
-  if (
-    payment.purpose ===
-    "VISITOR_RSVP"
-  ) {
+  if (payment.purpose === "VISITOR_RSVP") {
     await completeVisitorRsvp(payment);
 
     /*
-      completeVisitorRsvp sets payment.rsvp.
+      completeVisitorRsvp updates payment.rsvp.
+      Save it after the RSVP is created/found.
     */
-
     await payment.save();
   }
 
@@ -295,8 +249,7 @@ const finalizeSuccessfulPayment = async (
   ------------------------------------------------ */
 
   if (
-    payment.purpose ===
-      "KAARIGAR_APPLICATION" &&
+    payment.purpose === "KAARIGAR_APPLICATION" &&
     payment.application
   ) {
     await Application.findByIdAndUpdate(
@@ -314,31 +267,22 @@ const finalizeSuccessfulPayment = async (
    CREATE PAYMENT ORDER
 ========================================================= */
 
-const createPaymentOrder = async (
-  req,
-  res
-) => {
+const createPaymentOrder = async (req, res) => {
   try {
-    const {
-      eventId,
-      purpose,
-    } = req.body;
+    const { eventId, purpose } = req.body;
 
     if (!eventId || !purpose) {
       return res.status(400).json({
-        message:
-          "eventId and purpose are required",
+        message: "eventId and purpose are required",
       });
     }
 
     if (
       purpose !== "VISITOR_RSVP" &&
-      purpose !==
-        "KAARIGAR_APPLICATION"
+      purpose !== "KAARIGAR_APPLICATION"
     ) {
       return res.status(400).json({
-        message:
-          "Invalid payment purpose",
+        message: "Invalid payment purpose",
       });
     }
 
@@ -346,8 +290,7 @@ const createPaymentOrder = async (
        FIND EVENT
     ------------------------------------------------ */
 
-    const event =
-      await Event.findById(eventId);
+    const event = await Event.findById(eventId);
 
     if (!event) {
       return res.status(404).json({
@@ -359,10 +302,7 @@ const createPaymentOrder = async (
        FIND USER
     ------------------------------------------------ */
 
-    const user =
-      await User.findById(
-        req.user.userId
-      );
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -378,9 +318,7 @@ const createPaymentOrder = async (
        VISITOR PAYMENT
     ------------------------------------------------ */
 
-    if (
-      purpose === "VISITOR_RSVP"
-    ) {
+    if (purpose === "VISITOR_RSVP") {
       amount = event.visitorFee;
 
       rsvp = await RSVP.findOne({
@@ -388,27 +326,9 @@ const createPaymentOrder = async (
         visitor: req.user.userId,
       });
 
-      /*
-        IMPORTANT:
-
-        Only an actually registered/paid visitor
-        is blocked from paying again.
-
-        PENDING or FAILED does NOT block retry.
-      */
-
-      if (
-        rsvp &&
-        (
-          rsvp.status ===
-            "REGISTERED" ||
-          rsvp.paymentStatus ===
-            "PAID"
-        )
-      ) {
+      if (rsvp?.paymentStatus === "PAID") {
         return res.status(400).json({
-          message:
-            "You are already registered for this event.",
+          message: "This event is already paid for.",
         });
       }
     }
@@ -417,44 +337,30 @@ const createPaymentOrder = async (
        KAARIGAR PAYMENT
     ------------------------------------------------ */
 
-    if (
-      purpose ===
-      "KAARIGAR_APPLICATION"
-    ) {
-      amount =
-        event.kaarigarFee;
+    if (purpose === "KAARIGAR_APPLICATION") {
+      amount = event.kaarigarFee;
 
-      application =
-        await Application.findOne({
-          event: eventId,
-          kaarigar:
-            req.user.userId,
-        });
+      application = await Application.findOne({
+        event: eventId,
+        kaarigar: req.user.userId,
+      });
 
       if (!application) {
         return res.status(404).json({
-          message:
-            "Application not found for this event.",
+          message: "Application not found for this event.",
         });
       }
 
-      if (
-        application.status !==
-        "APPROVED"
-      ) {
+      if (application.status !== "APPROVED") {
         return res.status(400).json({
           message:
             "Payment is available only after Admin approves your application.",
         });
       }
 
-      if (
-        application.paymentStatus ===
-        "PAID"
-      ) {
+      if (application.paymentStatus === "PAID") {
         return res.status(400).json({
-          message:
-            "This application is already paid for.",
+          message: "This application is already paid for.",
         });
       }
     }
@@ -463,13 +369,9 @@ const createPaymentOrder = async (
        FREE EVENT
     ------------------------------------------------ */
 
-    if (
-      !amount ||
-      amount <= 0
-    ) {
+    if (!amount || amount <= 0) {
       return res.status(400).json({
-        message:
-          "No payment is required for this event.",
+        message: "No payment is required for this event.",
       });
     }
 
@@ -477,76 +379,87 @@ const createPaymentOrder = async (
        CHECK EXISTING SUCCESSFUL PAYMENT
     ------------------------------------------------ */
 
-    const successfulPayment =
-      await Payment.findOne({
-        user: req.user.userId,
-        event: eventId,
-        purpose,
-        status: "SUCCESS",
-      });
-
-    /*
-      SUCCESSFUL PAYMENT ALWAYS BLOCKS
-      ANOTHER PAYMENT.
-    */
+    const successfulPayment = await Payment.findOne({
+      user: req.user.userId,
+      event: eventId,
+      purpose,
+      status: "SUCCESS",
+    });
 
     if (successfulPayment) {
       return res.status(400).json({
-        message:
-          "This payment has already been completed.",
+        message: "This payment has already been completed.",
       });
     }
 
-    /*
-      IMPORTANT CHANGE:
+    /* -----------------------------------------------
+       RETURN EXISTING PENDING PAYMENT
+    ------------------------------------------------ */
 
-      We DO NOT reuse an existing PENDING payment.
+    const existingPayment = await Payment.findOne({
+      user: req.user.userId,
+      event: eventId,
+      purpose,
+      status: "PENDING",
+    }).sort({ createdAt: -1 });
 
-      If a previous payment is:
-        PENDING
-        FAILED
+    if (
+      existingPayment &&
+      existingPayment.cashfreePaymentSessionId
+    ) {
+      const checkoutUrl = createCheckoutUrl(
+        existingPayment
+      );
 
-      the user gets a fresh Cashfree order.
+      return res.status(200).json({
+        message: "Existing pending payment found",
 
-      This allows the user to try payment again.
-    */
+        paymentId: existingPayment._id,
+
+        orderId: existingPayment.cashfreeOrderId,
+
+        paymentSessionId:
+          existingPayment.cashfreePaymentSessionId,
+
+        environment: cashfreeEnvironment(),
+
+        amount: existingPayment.amount,
+
+        currency: existingPayment.currency,
+
+        purpose: existingPayment.purpose,
+
+        checkoutUrl,
+      });
+    }
 
     /* -----------------------------------------------
        CREATE CASHFREE ORDER
     ------------------------------------------------ */
 
-    const cf =
-      await initializeCashfree();
+    const cf = await initializeCashfree();
 
-    const orderId =
-      `KX_${crypto
-        .randomUUID()
-        .replace(/-/g, "")}`;
+    const orderId = `KX_${crypto
+      .randomUUID()
+      .replace(/-/g, "")}`;
 
     const request = {
-      order_amount:
-        Number(amount),
+      order_amount: Number(amount),
 
       order_currency: "INR",
 
       order_id: orderId,
 
       customer_details: {
-        customer_id:
-          String(user._id),
-
-        customer_name:
-          user.name,
-
-        customer_email:
-          user.email,
+        customer_id: String(user._id),
+        customer_name: user.name,
+        customer_email: user.email,
 
         /*
-          Replace this later with
-          actual user's phone number.
+          Replace this later with the actual user's
+          phone number if your User model contains one.
         */
-        customer_phone:
-          "9876543210",
+        customer_phone: "9876543210",
       },
 
       order_meta: {
@@ -555,23 +468,18 @@ const createPaymentOrder = async (
       },
 
       order_note:
-        purpose ===
-        "VISITOR_RSVP"
+        purpose === "VISITOR_RSVP"
           ? `Visitor RSVP - ${event.name}`
           : `Kaarigar Participation - ${event.name}`,
     };
 
-    const response =
-      await cf.PGCreateOrder(
-        request
-      );
+    const response = await cf.PGCreateOrder(request);
 
     const cashfreeOrderId =
       response.data.order_id;
 
     const paymentSessionId =
-      response.data
-        .payment_session_id;
+      response.data.payment_session_id;
 
     if (
       !cashfreeOrderId ||
@@ -586,66 +494,45 @@ const createPaymentOrder = async (
        SAVE PAYMENT AS PENDING
     ------------------------------------------------ */
 
-    const payment =
-      await Payment.create({
-        user:
-          req.user.userId,
+    const payment = await Payment.create({
+      user: req.user.userId,
 
-        event: eventId,
+      event: eventId,
 
-        application:
-          application?._id,
+      application: application?._id,
 
-        /*
-          IMPORTANT:
+      rsvp: rsvp?._id,
 
-          For a new payment attempt, an old
-          non-paid RSVP should not be treated
-          as a successful registration.
+      purpose,
 
-          Keep existing RSVP reference if present,
-          but it will only be considered registered
-          after SUCCESS.
-        */
-        rsvp: rsvp?._id,
+      amount: Number(amount),
 
-        purpose,
+      currency: "INR",
 
-        amount:
-          Number(amount),
+      cashfreeOrderId,
 
-        currency: "INR",
+      cashfreePaymentSessionId:
+        paymentSessionId,
 
-        cashfreeOrderId,
-
-        cashfreePaymentSessionId:
-          paymentSessionId,
-
-        status: "PENDING",
-      });
+      status: "PENDING",
+    });
 
     const checkoutUrl =
-      createCheckoutUrl(
-        payment
-      );
+      createCheckoutUrl(payment);
 
     return res.status(201).json({
       message:
         "Cashfree order created successfully",
 
-      paymentId:
-        payment._id,
+      paymentId: payment._id,
 
-      orderId:
-        cashfreeOrderId,
+      orderId: cashfreeOrderId,
 
       paymentSessionId,
 
-      environment:
-        cashfreeEnvironment(),
+      environment: cashfreeEnvironment(),
 
-      amount:
-        Number(amount),
+      amount: Number(amount),
 
       currency: "INR",
 
@@ -656,9 +543,7 @@ const createPaymentOrder = async (
   } catch (error) {
     console.error(
       "Cashfree Create Order Error:",
-      error?.response?.data ||
-        error?.message ||
-        error
+      error?.response?.data || error?.message || error
     );
 
     return res.status(500).json({
@@ -666,8 +551,7 @@ const createPaymentOrder = async (
         "Failed to create Cashfree payment order",
 
       error:
-        error?.response?.data
-          ?.message ||
+        error?.response?.data?.message ||
         error?.message ||
         "Unknown payment error",
     });
@@ -683,22 +567,18 @@ const renderCashfreeCheckout = async (
   res
 ) => {
   try {
-    const { token } =
-      req.query;
+    const { token } = req.query;
 
     if (!token) {
       return res
         .status(400)
-        .send(
-          "Missing checkout token"
-        );
+        .send("Missing checkout token");
     }
 
-    const decoded =
-      jwt.verify(
-        token,
-        process.env.JWT_SECRET
-      );
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
 
     if (
       decoded.type !==
@@ -706,32 +586,22 @@ const renderCashfreeCheckout = async (
     ) {
       return res
         .status(401)
-        .send(
-          "Invalid checkout token"
-        );
+        .send("Invalid checkout token");
     }
 
     const payment =
       await Payment.findOne({
-        _id:
-          decoded.paymentId,
-
-        user:
-          decoded.userId,
+        _id: decoded.paymentId,
+        user: decoded.userId,
       });
 
     if (!payment) {
       return res
         .status(404)
-        .send(
-          "Payment not found"
-        );
+        .send("Payment not found");
     }
 
-    if (
-      payment.status ===
-      "SUCCESS"
-    ) {
+    if (payment.status === "SUCCESS") {
       return res
         .status(400)
         .send(
@@ -802,18 +672,13 @@ const renderCashfreeCheckout = async (
    VERIFY PAYMENT
 ========================================================= */
 
-const verifyPayment = async (
-  req,
-  res
-) => {
+const verifyPayment = async (req, res) => {
   try {
-    const { orderId } =
-      req.body;
+    const { orderId } = req.body;
 
     if (!orderId) {
       return res.status(400).json({
-        message:
-          "orderId is required",
+        message: "orderId is required",
       });
     }
 
@@ -823,8 +688,7 @@ const verifyPayment = async (
 
     const payment =
       await Payment.findOne({
-        cashfreeOrderId:
-          orderId,
+        cashfreeOrderId: orderId,
       });
 
     if (!payment) {
@@ -852,13 +716,12 @@ const verifyPayment = async (
        ALREADY SUCCESSFUL
     ------------------------------------------------ */
 
-    if (
-      payment.status ===
-      "SUCCESS"
-    ) {
+    if (payment.status === "SUCCESS") {
       /*
-        Make sure RSVP/Application is also
-        finalized.
+        Make sure the linked RSVP/Application is also
+        finalized. This makes the operation resilient
+        if a previous request saved Payment but failed
+        before updating the related document.
       */
 
       await finalizeSuccessfulPayment(
@@ -869,15 +732,9 @@ const verifyPayment = async (
       return res.status(200).json({
         message:
           "Payment already verified",
-
-        status:
-          "SUCCESS",
-
-        paymentId:
-          payment._id,
-
-        amount:
-          payment.amount,
+        status: "SUCCESS",
+        paymentId: payment._id,
+        amount: payment.amount,
       });
     }
 
@@ -911,10 +768,7 @@ const verifyPayment = async (
        SUCCESS
     ------------------------------------------------ */
 
-    if (
-      result.status ===
-      "SUCCESS"
-    ) {
+    if (result.status === "SUCCESS") {
       await finalizeSuccessfulPayment(
         payment,
         result.payment
@@ -924,18 +778,14 @@ const verifyPayment = async (
         message:
           "Payment verified successfully",
 
-        status:
-          "SUCCESS",
+        status: "SUCCESS",
 
-        paymentId:
-          payment._id,
+        paymentId: payment._id,
 
         cashfreePaymentId:
-          result.payment
-            ?.cf_payment_id,
+          result.payment?.cf_payment_id,
 
-        amount:
-          payment.amount,
+        amount: payment.amount,
       });
     }
 
@@ -943,29 +793,15 @@ const verifyPayment = async (
        FAILED
     ------------------------------------------------ */
 
-    if (
-      result.status ===
-      "FAILED"
-    ) {
-      /*
-        IMPORTANT:
-
-        Only mark Payment FAILED.
-
-        DO NOT create/update RSVP.
-      */
-
-      payment.status =
-        "FAILED";
+    if (result.status === "FAILED") {
+      payment.status = "FAILED";
 
       if (
-        result.payment
-          ?.cf_payment_id
+        result.payment?.cf_payment_id
       ) {
         payment.cashfreePaymentId =
           String(
-            result.payment
-              .cf_payment_id
+            result.payment.cf_payment_id
           );
       }
 
@@ -975,11 +811,7 @@ const verifyPayment = async (
         message:
           "Payment was not successful",
 
-        status:
-          "FAILED",
-
-        paymentId:
-          payment._id,
+        status: "FAILED",
       });
     }
 
@@ -987,26 +819,13 @@ const verifyPayment = async (
        STILL PENDING
     ------------------------------------------------ */
 
-    /*
-      IMPORTANT:
-
-      Leave Payment as PENDING.
-
-      Do NOT create RSVP.
-
-      User can start a new payment because
-      createPaymentOrder does not block PENDING.
-    */
-
     return res.status(200).json({
       message:
         "Payment is still processing",
 
-      status:
-        "PENDING",
+      status: "PENDING",
 
-      paymentId:
-        payment._id,
+      paymentId: payment._id,
     });
   } catch (error) {
     console.error(
@@ -1021,8 +840,7 @@ const verifyPayment = async (
         "Failed to verify payment",
 
       error:
-        error?.response?.data
-          ?.message ||
+        error?.response?.data?.message ||
         error?.message ||
         "Unknown payment verification error",
     });
@@ -1039,37 +857,34 @@ const reconcileMyPayments = async (
 ) => {
   try {
     /*
-      Find all pending payments belonging
-      to the current user.
+      Find every pending payment belonging to this user.
+
+      This is what allows payment recovery after:
+      - app restart
+      - browser refresh
+      - closing the payment page
+      - temporary Cashfree delay
     */
 
     const payments =
       await Payment.find({
-        user:
-          req.user.userId,
-
-        status:
-          "PENDING",
+        user: req.user.userId,
+        status: "PENDING",
       }).sort({
         createdAt: -1,
       });
 
-    if (
-      payments.length === 0
-    ) {
+    if (payments.length === 0) {
       return res.status(200).json({
         message:
           "No pending payments",
-
         updated: 0,
       });
     }
 
     let updated = 0;
 
-    for (
-      const payment of payments
-    ) {
+    for (const payment of payments) {
       try {
         const result =
           await getCashfreePaymentStatus(
@@ -1087,8 +902,7 @@ const reconcileMyPayments = async (
         ------------------------------------------ */
 
         if (
-          result.status ===
-          "SUCCESS"
+          result.status === "SUCCESS"
         ) {
           await finalizeSuccessfulPayment(
             payment,
@@ -1105,17 +919,9 @@ const reconcileMyPayments = async (
         ------------------------------------------ */
 
         if (
-          result.status ===
-          "FAILED"
+          result.status === "FAILED"
         ) {
-          /*
-            Only mark payment failed.
-
-            Do not create RSVP.
-          */
-
-          payment.status =
-            "FAILED";
+          payment.status = "FAILED";
 
           if (
             result.payment
@@ -1135,13 +941,16 @@ const reconcileMyPayments = async (
 
         /*
           PENDING:
-
           Leave it as PENDING.
-
-          It can be checked again when
-          dashboard loads.
+          It can be checked again next time
+          the dashboard loads.
         */
       } catch (error) {
+        /*
+          Do not fail the whole reconciliation
+          because one payment could not be checked.
+        */
+
         console.error(
           `Failed to reconcile ${payment.cashfreeOrderId}:`,
           error?.response?.data ||
@@ -1179,9 +988,7 @@ const cashfreeReturn = async (
   res
 ) => {
   try {
-    const {
-      order_id,
-    } = req.query;
+    const { order_id } = req.query;
 
     if (!order_id) {
       return res
@@ -1193,8 +1000,7 @@ const cashfreeReturn = async (
 
     const payment =
       await Payment.findOne({
-        cashfreeOrderId:
-          order_id,
+        cashfreeOrderId: order_id,
       });
 
     if (!payment) {
@@ -1206,12 +1012,12 @@ const cashfreeReturn = async (
     }
 
     /*
-      Use the same verification logic
-      as /payments/verify.
+      Use the same common verification logic
+      here instead of duplicating the payment
+      finalization code.
     */
 
-    let status =
-      "PENDING";
+    let status = "PENDING";
 
     try {
       const result =
@@ -1221,33 +1027,19 @@ const cashfreeReturn = async (
           1500
         );
 
-      /* -----------------------------------------
-         SUCCESS
-      ------------------------------------------ */
-
       if (
-        result.status ===
-        "SUCCESS"
+        result.status === "SUCCESS"
       ) {
         await finalizeSuccessfulPayment(
           payment,
           result.payment
         );
 
-        status =
-          "SUCCESS";
-      }
-
-      /* -----------------------------------------
-         FAILED
-      ------------------------------------------ */
-
-      else if (
-        result.status ===
-        "FAILED"
+        status = "SUCCESS";
+      } else if (
+        result.status === "FAILED"
       ) {
-        payment.status =
-          "FAILED";
+        payment.status = "FAILED";
 
         if (
           result.payment
@@ -1262,17 +1054,8 @@ const cashfreeReturn = async (
 
         await payment.save();
 
-        status =
-          "FAILED";
+        status = "FAILED";
       }
-
-      /*
-        PENDING:
-
-        Leave payment PENDING.
-
-        Do not create RSVP.
-      */
     } catch (error) {
       console.error(
         "Cashfree Return Verification Error:",
@@ -1283,9 +1066,10 @@ const cashfreeReturn = async (
     }
 
     /*
-      KEEP MOBILE DEEP LINK.
+      KEEP THE EXISTING MOBILE DEEP LINK.
 
-      Required by Expo mobile app.
+      This is important because the same backend
+      is being used by the Expo mobile application.
     */
 
     const appUrl =
@@ -1297,9 +1081,7 @@ const cashfreeReturn = async (
         status
       )}`;
 
-    return res.redirect(
-      appUrl
-    );
+    return res.redirect(appUrl);
   } catch (error) {
     console.error(
       "Cashfree Return Error:",
@@ -1323,9 +1105,7 @@ const getMyPaymentHistory = async (
   res
 ) => {
   try {
-    const {
-      purpose,
-    } = req.query;
+    const { purpose } = req.query;
 
     const allowedPurposes = [
       "VISITOR_RSVP",
@@ -1345,13 +1125,11 @@ const getMyPaymentHistory = async (
     }
 
     const filter = {
-      user:
-        req.user.userId,
+      user: req.user.userId,
     };
 
     if (purpose) {
-      filter.purpose =
-        purpose;
+      filter.purpose = purpose;
     }
 
     const payments =
@@ -1365,37 +1143,30 @@ const getMyPaymentHistory = async (
         });
 
     return res.status(200).json({
-      payments:
-        payments.map(
-          (payment) => ({
-            paymentId:
-              payment._id,
+      payments: payments.map(
+        (payment) => ({
+          paymentId: payment._id,
 
-            event:
-              payment.event,
+          event: payment.event,
 
-            amount:
-              payment.amount,
+          amount: payment.amount,
 
-            currency:
-              payment.currency,
+          currency: payment.currency,
 
-            status:
-              payment.status,
+          status: payment.status,
 
-            purpose:
-              payment.purpose,
+          purpose: payment.purpose,
 
-            paymentDate:
-              payment.createdAt,
+          paymentDate:
+            payment.createdAt,
 
-            cashfreePaymentId:
-              payment.cashfreePaymentId,
+          cashfreePaymentId:
+            payment.cashfreePaymentId,
 
-            cashfreeOrderId:
-              payment.cashfreeOrderId,
-          })
-        ),
+          cashfreeOrderId:
+            payment.cashfreeOrderId,
+        })
+      ),
     });
   } catch (error) {
     console.error(
