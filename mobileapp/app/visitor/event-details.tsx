@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -18,6 +19,7 @@ type Event = {
   location: string;
   description?: string;
   visitorFee: number;
+  image?: string;
 };
 
 type Kaarigar = {
@@ -198,6 +200,15 @@ export default function EventDetailsScreen() {
       <Text className="mt-6 text-[27px] font-extrabold text-[#3B2923]">
         {event.name}
       </Text>
+
+      {event.image ? (
+        <Image
+          source={{ uri: event.image }}
+          accessibilityLabel={`${event.name} event image`}
+          className="mt-5 h-56 w-full rounded-[16px]"
+          resizeMode="cover"
+        />
+      ) : null}
 
       <Text className="mt-4 text-[15px] text-[#75665E]">
         📅 {new Date(event.date).toLocaleDateString()}

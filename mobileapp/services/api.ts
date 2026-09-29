@@ -43,11 +43,14 @@ export const api = async (
   options: RequestInit = {}
 ) => {
   const token = await AsyncStorage.getItem("token");
+  const isFormData = options.body instanceof FormData;
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData
+        ? {}
+        : { "Content-Type": "application/json" }),
 
       ...(token
         ? {
@@ -59,10 +62,19 @@ export const api = async (
     },
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get("content-type") || "";
+  const data = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
 
   if (!response.ok) {
-    throw new Error(data.message || "Something went wrong");
+    throw new Error(
+      typeof data === "object" && data?.message
+        ? data.message
+        : typeof data === "string" && data
+          ? data
+          : "Something went wrong"
+    );
   }
 
   return data;

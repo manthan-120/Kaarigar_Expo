@@ -1,8 +1,10 @@
 import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   Text,
   TextInput,
@@ -19,6 +21,7 @@ type Event = {
   description?: string;
   visitorFee: number;
   kaarigarFee: number;
+  image?: string;
 };
 
 export default function AdminEventsScreen() {
@@ -32,6 +35,7 @@ export default function AdminEventsScreen() {
   const [description, setDescription] = useState("");
   const [visitorFee, setVisitorFee] = useState("");
   const [kaarigarFee, setKaarigarFee] = useState("");
+  const [eventImage, setEventImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
   const fetchEvents = async () => {
     try {
@@ -85,16 +89,26 @@ export default function AdminEventsScreen() {
     try {
       setCreating(true);
 
+      const formData = new FormData();
+
+      formData.append("name", name);
+      formData.append("date", date);
+      formData.append("location", location);
+      formData.append("description", description);
+      formData.append("visitorFee", String(visitorFeeNumber));
+      formData.append("kaarigarFee", String(kaarigarFeeNumber));
+
+      if (eventImage) {
+        formData.append("image", {
+          uri: eventImage.uri,
+          name: eventImage.fileName || `event-${Date.now()}.jpg`,
+          type: eventImage.mimeType || "image/jpeg",
+        } as unknown as Blob);
+      }
+
       const data = await api("/events", {
         method: "POST",
-        body: JSON.stringify({
-          name,
-          date,
-          location,
-          description,
-          visitorFee: visitorFeeNumber,
-          kaarigarFee: kaarigarFeeNumber,
-        }),
+        body: formData,
       });
 
       Alert.alert("Success", data.message);
@@ -105,6 +119,7 @@ export default function AdminEventsScreen() {
       setDescription("");
       setVisitorFee("");
       setKaarigarFee("");
+      setEventImage(null);
 
       fetchEvents();
     } catch (error) {
@@ -116,6 +131,30 @@ export default function AdminEventsScreen() {
       );
     } finally {
       setCreating(false);
+    }
+  };
+
+  const pickEventImage = async () => {
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission Required",
+        "Allow photo library access to choose an event image."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+
+    if (!result.canceled) {
+      setEventImage(result.assets[0]);
     }
   };
 
@@ -239,6 +278,26 @@ export default function AdminEventsScreen() {
         </Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        onPress={pickEventImage}
+        className="mt-5 rounded-[14px] border border-[#E5D8CC] bg-white p-4"
+      >
+        <Text className="font-semibold text-[#3B2923]">
+          {eventImage ? "Change Event Image" : "Choose Event Image"}
+        </Text>
+        <Text className="mt-1 text-[13px] text-[#75665E]">
+          {eventImage?.fileName || "Optional image uploaded to Cloudinary"}
+        </Text>
+      </TouchableOpacity>
+
+      {eventImage ? (
+        <Image
+          source={{ uri: eventImage.uri }}
+          className="mt-3 h-48 w-full rounded-[14px]"
+          resizeMode="cover"
+        />
+      ) : null}
+
       {/* Existing Events */}
       <Text className="mb-4 mt-10 text-[20px] font-bold text-[#3B2923]">
         Existing Melas
@@ -260,6 +319,14 @@ export default function AdminEventsScreen() {
             key={event._id}
             className="mb-3 rounded-[16px] bg-white p-5"
           >
+            {event.image ? (
+              <Image
+                source={{ uri: event.image }}
+                className="mb-4 h-40 w-full rounded-[14px]"
+                resizeMode="cover"
+              />
+            ) : null}
+
             <Text className="text-[17px] font-bold text-[#3B2923]">
               {event.name}
             </Text>

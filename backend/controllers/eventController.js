@@ -108,6 +108,7 @@ const getEventKaarigars = async (req, res) => {
     const applications = await Application.find({
       event: req.params.id,
       status: "APPROVED",
+      paymentStatus: "PAID",
     })
       .populate("kaarigar", "name email")
       .populate("event", "name date location")

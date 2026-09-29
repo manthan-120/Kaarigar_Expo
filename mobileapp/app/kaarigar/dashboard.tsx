@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { useAuth } from "../../hooks/useAuth";
 import ProfileButton from "../../components/ProfileButton";
 import { openCashfreeCheckout } from "../../services/cashfreePayment";
@@ -23,6 +24,7 @@ type Event = {
   location: string;
   description?: string;
   kaarigarFee: number;
+  image?: string;
 };
 
 type Application = {
@@ -57,11 +59,7 @@ export default function KaarigarDashboard() {
         api("/payments/my-history"),
       ]);
 
-      const upcomingEvents = eventsData.events.filter(
-        (event: Event) => new Date(event.date) >= new Date()
-      );
-
-      setEvents(upcomingEvents);
+      setEvents(eventsData.events || []);
       setApplications(applicationsData.applications);
       setPaymentHistory(paymentHistoryData.payments);
     } catch (error) {
@@ -77,9 +75,11 @@ export default function KaarigarDashboard() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -243,7 +243,7 @@ export default function KaarigarDashboard() {
 
         {/* Upcoming Events */}
         <Text className="mb-4 mt-8 text-[20px] font-bold text-[#3B2923]">
-          Upcoming Events
+          Events
         </Text>
 
         {events.length === 0 ? (

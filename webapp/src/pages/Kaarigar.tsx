@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { payWithCashfree } from "../services/payment";
+import EventCard from "../components/EventCard";
 
 type Event = {
   _id: string;
@@ -348,121 +349,62 @@ export default function Kaarigar() {
                   getApplicationForEvent(event._id);
 
                 return (
-                  <article
+                  <EventCard
                     key={event._id}
-                    className="overflow-hidden rounded-2xl border border-[#eaded2] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-                  >
-
-                    {event.image ? (
-                      <img
-                        src={event.image}
-                        alt={event.name}
-                        className="h-40 w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-40 items-center justify-center bg-[#eaded2]">
-                        <span className="text-xs font-bold tracking-[0.2em] text-[#75665e]">
-                          KAARIGAR EXPO
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="p-6">
-
-                      <div className="mb-3 inline-block rounded-full bg-[#c65d3a]/10 px-3 py-1 text-xs font-bold text-[#c65d3a]">
-                        Kaarigar Fee: ₹{event.kaarigarFee}
-                      </div>
-
-                      <h3 className="font-['Playfair_Display'] text-2xl font-semibold">
-                        {event.name}
-                      </h3>
-
-                      <div className="mt-4 space-y-2 text-sm text-[#75665e]">
-
-                        <p>
-                          📅{" "}
-                          {new Date(
-                            event.date
-                          ).toLocaleDateString()}
-                        </p>
-
-                        <p>
-                          📍 {event.location}
-                        </p>
-
-                      </div>
-
-                      {event.description && (
-                        <p className="mt-4 line-clamp-3 text-sm leading-6 text-[#75665e]">
-                          {event.description}
-                        </p>
-                      )}
-
-                      {/* Application status */}
-
-                      {application ? (
+                    id={event._id}
+                    title={event.name}
+                    location={event.location}
+                    date={new Date(event.date).toLocaleDateString()}
+                    visitorFee={event.visitorFee}
+                    kaarigarFee={event.kaarigarFee}
+                    role="KAARIGAR"
+                    image={event.image}
+                    description={
+                      event.description ||
+                      "Discover this upcoming exhibition."
+                    }
+                    footer={
+                      application ? (
                         <div className="mt-6">
-
                           <div
                             className={`rounded-lg px-4 py-3 text-center text-sm font-semibold ${
-                              application.status ===
-                              "APPROVED"
+                              application.status === "APPROVED"
                                 ? "bg-green-100 text-green-700"
-                                : application.status ===
-                                  "REJECTED"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-amber-100 text-amber-700"
+                                : application.status === "REJECTED"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-amber-100 text-amber-700"
                             }`}
                           >
-                            Application:{" "}
-                            {application.status}
+                            Application: {application.status}
                           </div>
 
                           <button
-                            onClick={() =>
-                              navigate(
-                                `/events/${event._id}`
-                              )
-                            }
+                            onClick={() => navigate(`/events/${event._id}`)}
                             className="mt-3 w-full rounded-lg border border-[#c65d3a] px-5 py-3 text-sm font-semibold text-[#c65d3a] transition hover:bg-[#c65d3a] hover:text-white"
                           >
                             View Event
                           </button>
-
                         </div>
                       ) : (
                         <div className="mt-6 flex gap-3">
-
                           <button
-                            onClick={() =>
-                              navigate(
-                                `/events/${event._id}`
-                              )
-                            }
+                            onClick={() => navigate(`/events/${event._id}`)}
                             className="flex-1 rounded-lg border border-[#d9c9bd] px-4 py-3 text-sm font-semibold transition hover:bg-[#fff8ef]"
                           >
                             View
                           </button>
 
                           <button
-                            disabled={
-                              applying === event._id
-                            }
-                            onClick={() =>
-                              handleApply(event._id)
-                            }
+                            disabled={applying === event._id}
+                            onClick={() => handleApply(event._id)}
                             className="flex-1 rounded-lg bg-[#c65d3a] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#b45131] disabled:opacity-50"
                           >
-                            {applying === event._id
-                              ? "Applying..."
-                              : "Apply"}
+                            {applying === event._id ? "Applying..." : "Apply"}
                           </button>
-
                         </div>
-                      )}
-
-                    </div>
-                  </article>
+                      )
+                    }
+                  />
                 );
               })
             )}

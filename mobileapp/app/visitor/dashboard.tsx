@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { router } from "expo-router";
+import { useCallback, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
 
 import EventCard from "../../components/EventCard";
 import PaymentHistoryCard from "../../components/PaymentHistoryCard";
@@ -27,6 +27,7 @@ type Event = {
   description?: string;
   visitorFee: number;
   kaarigarFee: number;
+  image?: string;
 };
 
 type RSVP = {
@@ -85,12 +86,7 @@ export default function VisitorDashboard() {
         ),
       ]);
 
-      const upcomingEvents = eventsData.events.filter(
-        (event: Event) =>
-          new Date(event.date) >= new Date()
-      );
-
-      setEvents(upcomingEvents);
+      setEvents(eventsData.events || []);
 
       setRegistrations(
         registrationsData.rsvps || []
@@ -112,9 +108,11 @@ export default function VisitorDashboard() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -241,7 +239,7 @@ export default function VisitorDashboard() {
 
         {/* Upcoming Events */}
         <Text className="mb-4 mt-8 text-[20px] font-bold text-[#3B2923]">
-          Upcoming Events
+          Events
         </Text>
 
         {loading ? (

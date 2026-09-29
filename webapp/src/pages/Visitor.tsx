@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
+import EventCard from "../components/EventCard";
 
 type Event = {
   _id: string;
@@ -224,64 +225,21 @@ export default function Visitor() {
               </div>
             ) : (
               events.map((event) => (
-                <article
+                <EventCard
                   key={event._id}
-                  className="overflow-hidden rounded-2xl border border-[#eaded2] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-                >
-
-                  {/* Event top */}
-                  {event.image ? (
-                    <img
-                      src={event.image}
-                      alt={event.name}
-                      className="h-40 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-40 items-center justify-center bg-[#eaded2]">
-                      <span className="text-xs font-bold tracking-[0.2em] text-[#75665e]">
-                        KAARIGAR EXPO
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="p-6">
-
-                    <div className="mb-3 inline-block rounded-full bg-[#c65d3a]/10 px-3 py-1 text-xs font-bold text-[#c65d3a]">
-                      Visitor Fee: ₹{event.visitorFee}
-                    </div>
-
-                    <h3 className="font-['Playfair_Display'] text-2xl font-semibold">
-                      {event.name}
-                    </h3>
-
-                    <div className="mt-4 space-y-2 text-sm text-[#75665e]">
-                      <p>
-                        📅{" "}
-                        {new Date(event.date).toLocaleDateString()}
-                      </p>
-
-                      <p>
-                        📍 {event.location}
-                      </p>
-                    </div>
-
-                    {event.description && (
-                      <p className="mt-4 line-clamp-3 text-sm leading-6 text-[#75665e]">
-                        {event.description}
-                      </p>
-                    )}
-
-                    <button
-                      onClick={() =>
-                        navigate(`/events/${event._id}`)
-                      }
-                      className="mt-6 w-full rounded-lg bg-[#c65d3a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b45131]"
-                    >
-                      View Event →
-                    </button>
-
-                  </div>
-                </article>
+                  id={event._id}
+                  title={event.name}
+                  location={event.location}
+                  date={new Date(event.date).toLocaleDateString()}
+                  visitorFee={event.visitorFee}
+                  kaarigarFee={event.kaarigarFee}
+                  role="VISITOR"
+                  image={event.image}
+                  description={
+                    event.description ||
+                    "Discover this upcoming exhibition."
+                  }
+                />
               ))
             )}
 

@@ -250,10 +250,6 @@ export default function Admin() {
     (application) => application.status === "APPROVED"
   );
 
-  const rejectedApplications = applications.filter(
-    (application) => application.status === "REJECTED"
-  );
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fff8ef]">
