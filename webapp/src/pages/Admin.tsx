@@ -5,47 +5,18 @@ import AdminStatCard from "../components/AdminStatCard";
 import EventCard from "../components/EventCard";
 import { api } from "../services/api";
 import { useEvents } from "../hooks/useEvents";
-
-type Application = {
-  _id: string;
-  event: {
-    _id: string;
-    name: string;
-    date: string;
-    location: string;
-  };
-  kaarigar: {
-    _id: string;
-    name: string;
-    email: string;
-  };
-  craftType: string;
-  description?: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-};
-
-type Visitor = {
-  _id: string;
-  visitor?: {
-    _id: string;
-    name: string;
-    email: string;
-  };
-  user?: {
-    _id: string;
-    name: string;
-    email: string;
-  };
-  paymentStatus?: string;
-  status?: string;
-};
-
+import type { Application } from "../types/application";
+import RegisteredVisitors from "../components/RegisteredVisitors";
+import type { Visitor } from "../types/visitor";
+import type { Event } from "../types/event";
+import CreateEventForm from "../components/createEventForm";
+import ApplicationList from "../components/ApplicationList";
 export default function Admin() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [visitors, setVisitors] = useState<Visitor[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [applicationLoading, setApplicationLoading] = useState<string | null>(
     null
@@ -205,13 +176,13 @@ export default function Admin() {
     }
   };
 
-  const handleViewVisitors = async (eventId: string) => {
+ const handleViewVisitors = async (event: Event) => {
     try {
-      setSelectedEvent(eventId);
+      setSelectedEvent(event);
       setVisitorLoading(true);
       setError("");
 
-      const data = await api(`/rsvps/event/${eventId}`);
+      const data = await api(`/rsvps/event/${event._id}`);
 
       setVisitors(data.rsvps || []);
     } catch (err) {
@@ -340,128 +311,24 @@ export default function Admin() {
             </button>
           </div>
 
-          {showCreateEvent && (
-            <form
+         {showCreateEvent && (
+            <CreateEventForm
+              eventName={eventName}
+              setEventName={setEventName}
+              eventDate={eventDate}
+              setEventDate={setEventDate}
+              eventLocation={eventLocation}
+              setEventLocation={setEventLocation}
+              eventDescription={eventDescription}
+              setEventDescription={setEventDescription}
+              visitorFee={visitorFee}
+              setVisitorFee={setVisitorFee}
+              kaarigarFee={kaarigarFee}
+              setKaarigarFee={setKaarigarFee}
+              eventImage={eventImage}
+              setEventImage={setEventImage}
               onSubmit={handleCreateEvent}
-              className="mt-6 rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm"
-            >
-              <h3 className="font-['Playfair_Display'] text-xl font-bold">
-                Create New Event
-              </h3>
-
-              <div className="mt-5 grid gap-5 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-semibold">
-                    Event Name
-                  </label>
-
-                  <input
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    placeholder="Goa Handicraft Mela"
-                    className="mt-2 w-full rounded-lg border border-[#d9c9bd] px-4 py-3 outline-none focus:border-[#c65d3a]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold">
-                    Event Date
-                  </label>
-
-                  <input
-                    type="date"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    className="mt-2 w-full rounded-lg border border-[#d9c9bd] px-4 py-3 outline-none focus:border-[#c65d3a]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold">
-                    Location
-                  </label>
-
-                  <input
-                    value={eventLocation}
-                    onChange={(e) => setEventLocation(e.target.value)}
-                    placeholder="Panjim, Goa"
-                    className="mt-2 w-full rounded-lg border border-[#d9c9bd] px-4 py-3 outline-none focus:border-[#c65d3a]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold">
-                    Visitor Fee
-                  </label>
-
-                  <input
-                    type="number"
-                    min="0"
-                    value={visitorFee}
-                    onChange={(e) => setVisitorFee(e.target.value)}
-                    placeholder="100"
-                    className="mt-2 w-full rounded-lg border border-[#d9c9bd] px-4 py-3 outline-none focus:border-[#c65d3a]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold">
-                    Kaarigar Fee
-                  </label>
-
-                  <input
-                    type="number"
-                    min="0"
-                    value={kaarigarFee}
-                    onChange={(e) => setKaarigarFee(e.target.value)}
-                    placeholder="500"
-                    className="mt-2 w-full rounded-lg border border-[#d9c9bd] px-4 py-3 outline-none focus:border-[#c65d3a]"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-5">
-                <label className="text-sm font-semibold">
-                  Description
-                </label>
-
-                <textarea
-                  value={eventDescription}
-                  onChange={(e) => setEventDescription(e.target.value)}
-                  placeholder="Describe the event..."
-                  rows={4}
-                  className="mt-2 w-full resize-none rounded-lg border border-[#d9c9bd] px-4 py-3 outline-none focus:border-[#c65d3a]"
-                />
-              </div>
-
-              <div className="mt-5">
-                <label className="text-sm font-semibold">
-                    Event Image
-                </label>
-
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                    setEventImage(e.target.files?.[0] || null);
-                    }}
-                    className="mt-2 block w-full rounded-lg border border-[#d9c9bd] bg-white px-4 py-3 text-sm"
-                />
-
-                {eventImage && (
-                    <p className="mt-2 text-sm text-[#75665e]">
-                    Selected: {eventImage.name}
-                    </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                className="mt-6 rounded-lg bg-[#c65d3a] px-6 py-3 font-semibold text-white transition hover:bg-[#b45131]"
-              >
-                Create Event
-              </button>
-            </form>
+            />
           )}
 
           {/* Events */}
@@ -487,7 +354,7 @@ export default function Admin() {
                     image={event.image}
                     footer={
                       <button
-                        onClick={() => handleViewVisitors(event._id)}
+                        onClick={() => handleViewVisitors(event)}
                         className="mt-6 w-full rounded-lg border border-[#c65d3a] px-4 py-3 text-sm font-semibold text-[#c65d3a] transition hover:bg-[#c65d3a] hover:text-white"
                       >
                         View Registered Visitors
@@ -500,188 +367,24 @@ export default function Admin() {
         </section>
 
         {/* Applications */}
-        <section className="mt-12">
-          <div>
-            <h2 className="font-['Playfair_Display'] text-2xl font-bold">
-              Kaarigar Applications
-            </h2>
-
-            <p className="mt-1 text-sm text-[#75665e]">
-              Review applications and approve or reject participation.
-            </p>
-          </div>
-
-          <div className="mt-6 overflow-hidden rounded-2xl border border-[#eaded2] bg-white shadow-sm">
-            {applications.length === 0 ? (
-              <div className="p-8 text-center text-[#75665e]">
-                No Kaarigar applications yet.
-              </div>
-            ) : (
-              <div className="divide-y divide-[#eaded2]">
-                {applications.map((application) => (
-                  <div
-                    key={application._id}
-                    className="p-6"
-                  >
-                    <div className="flex flex-col justify-between gap-5 lg:flex-row">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-lg font-bold">
-                            {application.kaarigar?.name || "Kaarigar"}
-                          </h3>
-
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${
-                              application.status === "PENDING"
-                                ? "bg-amber-100 text-amber-700"
-                                : application.status === "APPROVED"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {application.status}
-                          </span>
-                        </div>
-
-                        <p className="mt-2 text-sm text-[#75665e]">
-                          {application.kaarigar?.email}
-                        </p>
-
-                        <p className="mt-3 text-sm">
-                          <span className="font-semibold">Event:</span>{" "}
-                          {application.event?.name}
-                        </p>
-
-                        <p className="mt-1 text-sm">
-                          <span className="font-semibold">Craft:</span>{" "}
-                          {application.craftType}
-                        </p>
-
-                        {application.description && (
-                          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#75665e]">
-                            {application.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {application.status === "PENDING" && (
-                        <div className="flex shrink-0 gap-3">
-                          <button
-                            disabled={
-                              applicationLoading === application._id
-                            }
-                            onClick={() =>
-                              handleApplicationStatus(
-                                application._id,
-                                "APPROVED"
-                              )
-                            }
-                            className="rounded-lg bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
-                          >
-                            {applicationLoading === application._id
-                              ? "Updating..."
-                              : "Approve"}
-                          </button>
-
-                          <button
-                            disabled={
-                              applicationLoading === application._id
-                            }
-                            onClick={() =>
-                              handleApplicationStatus(
-                                application._id,
-                                "REJECTED"
-                              )
-                            }
-                            className="rounded-lg bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+        <ApplicationList
+          applications={applications}
+          applicationLoading={applicationLoading}
+          onStatusChange={handleApplicationStatus}
+        />
 
         {/* Visitor Registrations */}
         {selectedEvent && (
-          <section ref={visitorSectionRef} className="mt-12 scroll-mt-6">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-              <div>
-                <h2 className="font-['Playfair_Display'] text-2xl font-bold">
-                  Registered Visitors
-                </h2>
-
-                <p className="mt-1 text-sm text-[#75665e]">
-                  Visitors registered for the selected event.
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  setSelectedEvent(null);
-                  setVisitors([]);
-                }}
-                className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-6 overflow-hidden rounded-2xl border border-[#eaded2] bg-white shadow-sm">
-              {visitorLoading ? (
-                <div className="p-8 text-center text-[#75665e]">
-                  Loading visitors...
-                </div>
-              ) : visitors.length === 0 ? (
-                <div className="p-8 text-center text-[#75665e]">
-                  No visitors registered for this event.
-                </div>
-              ) : (
-                <div className="divide-y divide-[#eaded2]">
-                  {visitors.map((visitor, index) => {
-                    const person = visitor.visitor || visitor.user;
-
-                    return (
-                      <div
-                        key={visitor._id}
-                        className="flex flex-col justify-between gap-3 p-5 sm:flex-row sm:items-center"
-                      >
-                        <div>
-                          <p className="font-semibold">
-                            {index + 1}.{" "}
-                            {person?.name || "Visitor"}
-                          </p>
-
-                          <p className="mt-1 text-sm text-[#75665e]">
-                            {person?.email || "Email unavailable"}
-                          </p>
-                        </div>
-
-                        <div className="flex gap-2">
-                          {visitor.status && (
-                            <span className="rounded-full bg-[#f4eee8] px-3 py-1 text-xs font-semibold">
-                              {visitor.status}
-                            </span>
-                          )}
-
-                          {visitor.paymentStatus && (
-                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                              Payment: {visitor.paymentStatus}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </section>
+          <RegisteredVisitors
+            visitors={visitors}
+            visitorLoading={visitorLoading}
+            selectedEventName={selectedEvent.name}
+            sectionRef={visitorSectionRef}
+            onClose={() => {
+              setSelectedEvent(null);
+              setVisitors([]);
+            }}
+          />
         )}
       </main>
     </div>
