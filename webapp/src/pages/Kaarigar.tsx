@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -6,6 +5,7 @@ import { api } from "../services/api";
 import { payWithCashfree } from "../services/payment";
 import EventCard from "../components/EventCard";
 import { useEvents } from "../hooks/useEvents";
+import Navbar from "../components/Navbar";
 
 type Application = {
   _id: string;
@@ -35,7 +35,7 @@ type Application = {
 
 export default function Kaarigar() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
@@ -144,11 +144,7 @@ export default function Kaarigar() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
+  
   const getApplicationForEvent = (eventId: string) => {
     return applications.find(
       (application) => application.event?._id === eventId
@@ -167,7 +163,7 @@ export default function Kaarigar() {
     (application) => application.status === "REJECTED"
   );
 
-  if (loading||eventsLoading) {
+  if (loading || eventsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fff8ef]">
         <p className="text-[#75665e]">
@@ -181,47 +177,7 @@ export default function Kaarigar() {
     <div className="min-h-screen bg-[#fff8ef] text-[#3b2923]">
 
       {/* ================= HEADER ================= */}
-
-      <header className="border-b border-[#eaded2] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-
-          <div>
-            <h1 className="font-['Playfair_Display'] text-3xl font-bold">
-              Kaarigar Dashboard
-            </h1>
-
-            <p className="mt-1 text-sm text-[#75665e]">
-              Discover events and manage your applications
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-
-            <button
-              onClick={() => navigate("/")}
-              className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold transition hover:bg-[#fff8ef]"
-            >
-              Home
-            </button>
-
-            <button
-              onClick={() => navigate("/profile")}
-              className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold transition hover:bg-[#fff8ef]"
-            >
-              Profile
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="rounded-lg bg-[#3b2923] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#251915]"
-            >
-              Logout
-            </button>
-
-          </div>
-
-        </div>
-      </header>
+      <Navbar role="KAARIGAR" />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
 
@@ -233,9 +189,9 @@ export default function Kaarigar() {
           </div>
         )}
 
-        {(error||eventsError) && (
+        {(error || eventsError) && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error||eventsError}
+            {error || eventsError}
           </div>
         )}
 

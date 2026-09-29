@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import { api } from "../services/api";
 import EventCard from "../components/EventCard";
+import Navbar from "../components/Navbar";
 
 type Registration = {
   _id: string;
@@ -31,7 +32,7 @@ type Registration = {
 
 export default function Visitor() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const {
   events,
   loading: eventsLoading,
@@ -61,9 +62,24 @@ export default function Visitor() {
     try {
       setLoading(true);
       setError("");
-      const registrationsData = await api("/rsvps/my");
 
-      setRegistrations(registrationsData.rsvps || []);
+      try {
+        await api("/payments/reconcile", {
+          method: "POST",
+        });
+      } catch (reconcileError) {
+        console.error(
+          "Payment reconciliation failed:",
+          reconcileError
+        );
+      }
+
+      const registrationsData =
+        await api("/rsvps/my");
+
+      setRegistrations(
+        registrationsData.rsvps || []
+      );
     } catch (err) {
       setError(
         err instanceof Error
@@ -74,13 +90,7 @@ export default function Visitor() {
       setLoading(false);
     }
   };
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  if (loading||eventsLoading) {
+  if (loading || eventsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fff8ef]">
         <p className="text-[#75665e]">
@@ -94,50 +104,20 @@ export default function Visitor() {
     <div className="min-h-screen bg-[#fff8ef] text-[#3b2923]">
 
       {/* ================= HEADER ================= */}
-      <header className="border-b border-[#eaded2] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-
-          <div>
-            <h1 className="font-['Playfair_Display'] text-3xl font-bold">
-              Visitor Dashboard
-            </h1>
-
-            <p className="mt-1 text-sm text-[#75665e]">
-              Discover events and manage your registrations
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-
-            <button
-              onClick={() => navigate("/")}
-              className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold transition hover:bg-[#fff8ef]"
-            >
-              Home
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="rounded-lg bg-[#3b2923] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#251915]"
-            >
-              Logout
-            </button>
-
-          </div>
-        </div>
-      </header>
+      <Navbar role="VISITOR" />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
 
         {/* ================= ERROR ================= */}
-        {(error||eventsError) && (
+        {(error || eventsError) && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error||eventsError}
+            {error || eventsError}
           </div>
         )}
 
         {/* ================= WELCOME ================= */}
         <section className="rounded-2xl bg-[#3b2923] p-7 text-white shadow-sm">
+
           <p className="text-sm text-[#eaded2]">
             Welcome back
           </p>
@@ -146,12 +126,12 @@ export default function Visitor() {
             {user?.name}
           </h2>
 
-          <p className="mt-2 max-w-xl text-sm leading-6 text-[#eaded2]">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#eaded2]">
             Explore upcoming exhibitions, discover traditional
             artisans and register for events.
           </p>
-        </section>
 
+       </section>
         {/* ================= STATS ================= */}
         <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 
