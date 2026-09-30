@@ -217,7 +217,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-[#fff8ef] text-[#3b2923]">
       {/* Header */}
-      <Navbar role="ADMIN" />
+      <Navbar />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         {/* Messages */}

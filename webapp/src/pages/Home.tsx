@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import CraftItem from "../components/CraftItem";
 export default function Home() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { events, loading: loadingEvents } = useEvents();
 
   const scrollToEvents = () => {
@@ -12,13 +12,6 @@ export default function Home() {
       .getElementById("events")
       ?.scrollIntoView({ behavior: "smooth" });
   };
-
-  const dashboardPath =
-    user?.role === "ADMIN"
-      ? "/admin"
-      : user?.role === "KAARIGAR"
-        ? "/kaarigar"
-        : "/visitor";
 
   return (
     <div className="min-h-screen bg-[#fff8ef] text-[#3b2923]">
@@ -64,46 +57,19 @@ export default function Home() {
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {user ? (
-              <>
-                <Link
-                  to={dashboardPath}
-                  className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
-                >
-                  Dashboard
-                </Link>
+            <Link
+              to="/login"
+              className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
+            >
+              Login
+            </Link>
 
-                <Link
-                  to="/profile"
-                  className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
-                >
-                  Profile
-                </Link>
-
-                <button
-                  onClick={logout}
-                  className="rounded-lg bg-[#c65d3a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#b45131]"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
-                >
-                  Login
-                </Link>
-
-                <Link
-                  to="/register"
-                  className="rounded-lg bg-[#c65d3a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#b45131]"
-                >
-                  Register
-                </Link>
-              </>
-            )}
+            <Link
+              to="/register"
+              className="rounded-lg bg-[#c65d3a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#b45131]"
+            >
+              Register
+            </Link>
           </div>
         </div>
       </header>
@@ -170,9 +136,6 @@ export default function Home() {
                 </h2>
               </div>
 
-              <button className="self-start text-sm font-semibold text-[#c65d3a] transition hover:underline sm:self-auto">
-                View all →
-              </button>
             </div>
 
             {/* Events */}

@@ -50,17 +50,14 @@ export default function EventCard({
       <div className="p-6">
 
         {/* Fees */}
-        {role && (
-          <div className="mb-4 space-y-1 text-sm font-bold text-[#c65d3a]">
-            {(role === "VISITOR" || role === "ADMIN") && (
-              <p>Visitor Fee: ₹{visitorFee}</p>
-            )}
-
-            {(role === "KAARIGAR" || role === "ADMIN") && (
-              <p>Kaarigar Fee: ₹{kaarigarFee}</p>
-            )}
-          </div>
-        )}
+        <div className="mb-4 space-y-1 text-sm font-bold text-[#c65d3a]">
+          {(!role || role === "VISITOR" || role === "ADMIN") && (
+            <p>Visitor Fee: ₹{visitorFee}</p>
+          )}
+          {(!role || role === "KAARIGAR" || role === "ADMIN") && (
+            <p>Kaarigar Fee: ₹{kaarigarFee}</p>
+          )}
+        </div>
 
         {/* Title */}
         <h3 className="font-['Playfair_Display'] text-2xl font-semibold text-[#3b2923]">

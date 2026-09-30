@@ -97,7 +97,7 @@ export default function Visitor() {
     <div className="min-h-screen bg-[#fff8ef] text-[#3b2923]">
 
       {/* ================= HEADER ================= */}
-      <Navbar role="VISITOR" />
+      <Navbar />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
 
@@ -125,47 +125,6 @@ export default function Visitor() {
           </p>
 
        </section>
-        {/* ================= STATS ================= */}
-        <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">
-              Upcoming Events
-            </p>
-
-            <p className="mt-2 text-3xl font-bold">
-              {events.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">
-              My Registrations
-            </p>
-
-            <p className="mt-2 text-3xl font-bold">
-              {registrations.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">
-              Confirmed Registrations
-            </p>
-
-            <p className="mt-2 text-3xl font-bold text-green-600">
-              {
-                registrations.filter(
-                  (registration) =>
-                    registration.status === "REGISTERED" &&
-                    registration.paymentStatus === "PAID"
-                ).length
-              }
-            </p>
-          </div>
-
-        </section>
-
         {/* ================= UPCOMING EVENTS ================= */}
         <section className="mt-12">
 

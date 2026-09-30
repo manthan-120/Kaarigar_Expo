@@ -4,6 +4,7 @@ import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { payWithCashfree } from "../services/payment";
 import type { Event } from "../types/event";
+import Navbar from "../components/Navbar";
 
 type Kaarigar = {
   _id: string;
@@ -22,6 +23,12 @@ type VisitorRegistration = {
   paymentStatus?: string;
 };
 
+type KaarigarApplication = {
+  event: string | { _id: string };
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  paymentStatus?: "UNPAID" | "PAID" | "REFUNDED";
+};
+
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -33,6 +40,8 @@ export default function EventDetails() {
   const [registering, setRegistering] = useState(false);
   const [visitorRegistration, setVisitorRegistration] =
     useState<VisitorRegistration | null>(null);
+  const [kaarigarApplication, setKaarigarApplication] =
+    useState<KaarigarApplication | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -50,14 +59,18 @@ export default function EventDetails() {
           requests.push(api("/rsvps/my"));
         }
 
-        const [eventData, kaarigarData, registrationsData] =
+        if (user?.role === "KAARIGAR") {
+          requests.push(api("/applications/my"));
+        }
+
+        const [eventData, kaarigarData, userData] =
           await Promise.all(requests);
 
         setEvent(eventData.event);
         setKaarigars(kaarigarData.kaarigars || []);
 
-        if (registrationsData) {
-          const registration = (registrationsData.rsvps || []).find(
+        if (user?.role === "VISITOR" && userData) {
+          const registration = (userData.rsvps || []).find(
             (item: VisitorRegistration) => {
               const eventId =
                 typeof item.event === "string"
@@ -67,6 +80,19 @@ export default function EventDetails() {
             }
           );
           setVisitorRegistration(registration || null);
+        }
+
+        if (user?.role === "KAARIGAR" && userData) {
+          const application = (userData.applications || []).find(
+            (item: KaarigarApplication) => {
+              const eventId =
+                typeof item.event === "string"
+                  ? item.event
+                  : item.event?._id;
+              return eventId === id;
+            }
+          );
+          setKaarigarApplication(application || null);
         }
       } catch (error) {
         console.error("Failed to load event:", error);
@@ -121,6 +147,33 @@ export default function EventDetails() {
       }
 
       if (user.role === "KAARIGAR") {
+        if (
+          kaarigarApplication?.status === "APPROVED" &&
+          kaarigarApplication.paymentStatus !== "PAID"
+        ) {
+          const payment = await payWithCashfree(
+            event._id,
+            "KAARIGAR_APPLICATION"
+          );
+
+          if (payment.status === "SUCCESS") {
+            setMessage("Participation fee paid successfully.");
+            setKaarigarApplication({
+              ...kaarigarApplication,
+              paymentStatus: "PAID",
+            });
+          } else {
+            setError(
+              payment.status === "PENDING"
+                ? "Payment is still pending. Please check your dashboard shortly."
+                : "Payment was not completed."
+            );
+          }
+          return;
+        }
+
+        if (kaarigarApplication) return;
+
         if (!user.craftType || !user.description) {
           setError(
             "Complete your craft type and description in your profile before applying."
@@ -128,7 +181,7 @@ export default function EventDetails() {
           return;
         }
 
-        await api("/applications", {
+        const applicationData = await api("/applications", {
           method: "POST",
           body: JSON.stringify({
             eventId: event._id,
@@ -140,6 +193,11 @@ export default function EventDetails() {
         setMessage(
           "Application submitted. Payment will be available after admin approval."
         );
+        setKaarigarApplication({
+          event: event._id,
+          status: applicationData.application?.status || "PENDING",
+          paymentStatus: applicationData.application?.paymentStatus || "UNPAID",
+        });
       }
     } catch (registrationError) {
       setError(
@@ -156,29 +214,7 @@ export default function EventDetails() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#fff8ef]">
-        <header className="border-b border-[#eaded2] bg-white">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
-            <div
-              className="flex cursor-pointer flex-col leading-none"
-              onClick={() => navigate("/")}
-            >
-              <span className="text-xl font-bold tracking-wide text-[#3b2923]">
-                KAARIGAR
-              </span>
-
-              <span className="mt-1 text-[10px] font-semibold tracking-[0.3em] text-[#c65d3a]">
-                EXPO
-              </span>
-            </div>
-
-            <button
-              onClick={() => navigate("/")}
-              className="rounded-lg border border-[#d9c9bd] px-5 py-2.5 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
-            >
-              Home
-            </button>
-          </div>
-        </header>
+        <Navbar showAuth />
 
         <main className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
           <p className="text-center text-sm text-[#75665e]">
@@ -193,29 +229,7 @@ export default function EventDetails() {
   if (!event) {
     return (
       <div className="min-h-screen bg-[#fff8ef]">
-        <header className="border-b border-[#eaded2] bg-white">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
-            <div
-              className="flex cursor-pointer flex-col leading-none"
-              onClick={() => navigate("/")}
-            >
-              <span className="text-xl font-bold tracking-wide text-[#3b2923]">
-                KAARIGAR
-              </span>
-
-              <span className="mt-1 text-[10px] font-semibold tracking-[0.3em] text-[#c65d3a]">
-                EXPO
-              </span>
-            </div>
-
-            <button
-              onClick={() => navigate("/")}
-              className="rounded-lg border border-[#d9c9bd] px-5 py-2.5 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
-            >
-              Home
-            </button>
-          </div>
-        </header>
+        <Navbar showAuth />
 
         <main className="mx-auto max-w-7xl px-6 py-16 text-center lg:px-8">
           <h2 className="font-['Playfair_Display'] text-3xl font-semibold text-[#3b2923]">
@@ -236,31 +250,7 @@ export default function EventDetails() {
   return (
     <div className="min-h-screen bg-[#fff8ef]">
 
-      {/* Navbar */}
-      <header className="border-b border-[#eaded2] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
-
-          <div
-            className="flex cursor-pointer flex-col leading-none"
-            onClick={() => navigate("/")}
-          >
-            <span className="text-xl font-bold tracking-wide text-[#3b2923]">
-              KAARIGAR
-            </span>
-
-            <span className="mt-1 text-[10px] font-semibold tracking-[0.3em] text-[#c65d3a]">
-              EXPO
-            </span>
-          </div>
-
-          <button
-            onClick={() => navigate("/")}
-            className="rounded-lg border border-[#d9c9bd] px-5 py-2.5 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
-          >
-            Home
-          </button>
-        </div>
-      </header>
+      <Navbar showAuth />
 
       {/* Event Details */}
       <main>
@@ -333,7 +323,7 @@ export default function EventDetails() {
               </p>
 
               <div className="mt-3 space-y-3">
-                {(user?.role === "VISITOR" || user?.role === "ADMIN") && (
+                {(!user || user.role === "VISITOR" || user.role === "ADMIN") && (
                   <div>
                   <h2 className="font-['Playfair_Display'] text-3xl font-semibold text-[#3b2923]">
                     ₹{event.visitorFee}
@@ -345,7 +335,7 @@ export default function EventDetails() {
                   </div>
                 )}
 
-                {(user?.role === "KAARIGAR" || user?.role === "ADMIN") && (
+                {(!user || user.role === "KAARIGAR" || user.role === "ADMIN") && (
                   <div>
                   <h2 className="font-['Playfair_Display'] text-3xl font-semibold text-[#3b2923]">
                     ₹{event.kaarigarFee}
@@ -357,6 +347,15 @@ export default function EventDetails() {
                   </div>
                 )}
               </div>
+
+              {!user && (
+                <button
+                  onClick={() => navigate("/login")}
+                  className="mt-6 w-full rounded-lg bg-[#c65d3a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b45131]"
+                >
+                  Login to Register
+                </button>
+              )}
 
               {message && (
                 <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
@@ -372,9 +371,29 @@ export default function EventDetails() {
 
               {user?.role === "VISITOR" && visitorRegistration && (
                 <div className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-                  Registration: {visitorRegistration.status || "REGISTERED"}
+                  Registration: {visitorRegistration.status || "REGISTERED"} 
                   <br />
                   Payment: {visitorRegistration.paymentStatus || "PENDING"}
+                </div>
+              )}
+
+              {user?.role === "KAARIGAR" && kaarigarApplication && (
+                <div
+                  className={`mt-4 rounded-lg px-3 py-2 text-sm font-semibold ${
+                    kaarigarApplication.status === "APPROVED" 
+                      ? "bg-green-50 text-green-700"
+                      : kaarigarApplication.status === "REJECTED"
+                        ? "bg-red-50 text-red-700"
+                        : "bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  Application: {kaarigarApplication.status}
+                  {kaarigarApplication.status === "APPROVED" && (
+                    <>
+                      <br />
+                      Payment: {kaarigarApplication.paymentStatus || "UNPAID"}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -384,7 +403,13 @@ export default function EventDetails() {
                   disabled={
                     registering ||
                     (user?.role === "VISITOR" &&
-                      visitorRegistration?.paymentStatus === "PAID")
+                      visitorRegistration?.paymentStatus === "PAID") ||
+                    (user?.role === "KAARIGAR" &&
+                      kaarigarApplication !== null &&
+                      !(
+                        kaarigarApplication.status === "APPROVED" &&
+                        kaarigarApplication.paymentStatus !== "PAID"
+                      ))
                   }
                   className="mt-6 w-full rounded-lg bg-[#c65d3a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b45131] disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -393,10 +418,19 @@ export default function EventDetails() {
                     : user?.role === "VISITOR"
                       ? visitorRegistration?.paymentStatus === "PAID"
                         ? "Already Registered"
+                        : visitorRegistration
+                          ? "Pay Now"
                         : event.visitorFee > 0
-                        ? "Register & Pay"
-                        : "Register for Event"
-                      : "Apply for Event"}
+                          ? "Register & Pay"
+                          : "Register for Event"
+                      : kaarigarApplication
+                        ? kaarigarApplication.status === "APPROVED" &&
+                          kaarigarApplication.paymentStatus !== "PAID"
+                          ? "Pay Participation Fee"
+                          : kaarigarApplication.paymentStatus === "PAID"
+                            ? "Payment Paid"
+                            : `Application ${kaarigarApplication.status}`
+                        : "Apply for Event"}
                 </button>
               )}
             </div>

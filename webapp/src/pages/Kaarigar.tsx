@@ -151,14 +151,6 @@ export default function Kaarigar() {
     );
   };
 
-  const pendingApplications = applications.filter(
-    (application) => application.status === "PENDING"
-  );
-
-  const approvedApplications = applications.filter(
-    (application) => application.status === "APPROVED"
-  );
-
   const rejectedApplications = applications.filter(
     (application) => application.status === "REJECTED"
   );
@@ -177,7 +169,7 @@ export default function Kaarigar() {
     <div className="min-h-screen bg-[#fff8ef] text-[#3b2923]">
 
       {/* ================= HEADER ================= */}
-      <Navbar role="KAARIGAR" />
+      <Navbar />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
 
@@ -217,52 +209,6 @@ export default function Kaarigar() {
             Find upcoming exhibitions, apply to participate and
             track your application status.
           </p>
-
-        </section>
-
-        {/* ================= STATS ================= */}
-
-        <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">
-              Available Events
-            </p>
-
-            <p className="mt-2 text-3xl font-bold">
-              {events.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">
-              My Applications
-            </p>
-
-            <p className="mt-2 text-3xl font-bold">
-              {applications.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">
-              Pending
-            </p>
-
-            <p className="mt-2 text-3xl font-bold text-amber-600">
-              {pendingApplications.length}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-[#eaded2] bg-white p-6 shadow-sm">
-            <p className="text-sm text-[#75665e]">
-              Approved
-            </p>
-
-            <p className="mt-2 text-3xl font-bold text-green-600">
-              {approvedApplications.length}
-            </p>
-          </div>
 
         </section>
 

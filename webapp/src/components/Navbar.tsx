@@ -1,121 +1,49 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-type NavbarProps = {
-  role?: "ADMIN" | "KAARIGAR" | "VISITOR";
-};
-
-export default function Navbar({ role }: NavbarProps) {
+export default function Navbar({ showAuth = false }: { showAuth?: boolean }) {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
-  const currentRole = role || user?.role;
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  const { user } = useAuth();
 
   return (
-    <header className="border-b border-[#eaded2] bg-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <header className="sticky top-0 z-50 border-b border-[#eaded2] bg-[#fff8ef]/95 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
         {/* Logo */}
-        <button
-          onClick={() => navigate("/")}
-          className="font-['Playfair_Display'] text-2xl font-bold tracking-wide text-[#3b2923]"
-        >
-          KAARIGAR EXPO
-        </button>
+        <div className="flex flex-col leading-none">
+          <span className="text-xl font-bold tracking-wide text-[#3b2923]">
+            KAARIGAR
+          </span>
 
-        {/* Navigation */}
-        <nav className="hidden items-center gap-6 md:flex">
-          <button
-            onClick={() => navigate("/")}
-            className="text-sm font-medium text-[#75665e] transition hover:text-[#c65d3a]"
-          >
-            Home
-          </button>
-
-          <button
-            onClick={() => navigate("/#events")}
-            className="text-sm font-medium text-[#75665e] transition hover:text-[#c65d3a]"
-          >
-            Events
-          </button>
-
-          <button
-            onClick={() => navigate("/#crafts")}
-            className="text-sm font-medium text-[#75665e] transition hover:text-[#c65d3a]"
-          >
-            Crafts
-          </button>
-
-          <button
-            onClick={() => navigate("/#about")}
-            className="text-sm font-medium text-[#75665e] transition hover:text-[#c65d3a]"
-          >
-            About
-          </button>
-        </nav>
-
-        {/* Right side */}
-        <div className="flex items-center gap-3">
-          {currentRole === "ADMIN" ? (
-            <>
-              <button
-                onClick={() => navigate("/admin")}
-                className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:bg-[#fff8ef]"
-              >
-                Dashboard
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="rounded-lg bg-[#3b2923] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#251915]"
-              >
-                Logout
-              </button>
-            </>
-          ) : user ? (
-            <>
-              <button
-                onClick={() =>
-                  navigate(
-                    currentRole === "KAARIGAR"
-                      ? "/kaarigar"
-                      : "/"
-                  )
-                }
-                className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:bg-[#fff8ef]"
-              >
-                Profile
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="rounded-lg bg-[#3b2923] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#251915]"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => navigate("/login")}
-                className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:bg-[#fff8ef]"
-              >
-                Login
-              </button>
-
-              <button
-                onClick={() => navigate("/register")}
-                className="rounded-lg bg-[#c65d3a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#b45131]"
-              >
-                Register
-              </button>
-            </>
-          )}
+          <span className="mt-1 text-[10px] font-semibold tracking-[0.3em] text-[#c65d3a]">
+            EXPO
+          </span>
         </div>
+
+        {/* Profile */}
+        {user ? (
+          <button
+            onClick={() => navigate("/profile")}
+            className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
+          >
+            Profile
+          </button>
+        ) : showAuth ? (
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => navigate("/login")}
+              className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
+            >
+              Login
+            </button>
+
+            <button
+              onClick={() => navigate("/register")}
+              className="rounded-lg bg-[#c65d3a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#b45131]"
+            >
+              Register
+            </button>
+          </div>
+        ) : null}
       </div>
     </header>
   );

@@ -80,7 +80,7 @@ export default function ApplicationList({
                   </div>
 
                   {application.status === "PENDING" && (
-                    <div className="flex shrink-0 gap-3">
+                    <div className="flex shrink-0 gap-2">
                       <button
                         disabled={
                           applicationLoading === application._id
@@ -91,7 +91,7 @@ export default function ApplicationList({
                             "APPROVED"
                           )
                         }
-                        className="rounded-lg bg-green-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
+                        className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {applicationLoading === application._id
                           ? "Updating..."
@@ -108,7 +108,7 @@ export default function ApplicationList({
                             "REJECTED"
                           )
                         }
-                        className="rounded-lg bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                        className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Reject
                       </button>

@@ -124,7 +124,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
       }}
     >
-      {children}
+      {loading ? (
+        <div className="flex min-h-screen items-center justify-center bg-[#fff8ef]">
+          <p className="text-[#75665e]">Loading...</p>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 }
