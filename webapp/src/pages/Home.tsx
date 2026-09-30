@@ -1,11 +1,18 @@
+import { useEffect } from "react";
 import EventCard from "../components/EventCard";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import CraftItem from "../components/CraftItem";
 export default function Home() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { events, loading: loadingEvents } = useEvents();
+
+  useEffect(() => {
+    if (user) {
+      logout();
+    }
+  }, [user, logout]);
 
   const scrollToEvents = () => {
     document
@@ -57,19 +64,23 @@ export default function Home() {
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              to="/login"
-              className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
-            >
-              Login
-            </Link>
+            {!user && (
+              <>
+                <Link
+                  to="/login"
+                  className="rounded-lg border border-[#d9c9bd] px-4 py-2 text-sm font-semibold text-[#3b2923] transition hover:border-[#c65d3a] hover:text-[#c65d3a]"
+                >
+                  Login
+                </Link>
 
-            <Link
-              to="/register"
-              className="rounded-lg bg-[#c65d3a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#b45131]"
-            >
-              Register
-            </Link>
+                <Link
+                  to="/register"
+                  className="rounded-lg bg-[#c65d3a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#b45131]"
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
