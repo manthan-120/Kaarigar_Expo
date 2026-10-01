@@ -1,5 +1,6 @@
 const RSVP = require("../models/rsvp");
 const Event = require("../models/event");
+const { generateTicketNumber } = require("../utils/ticketGen");
 
 // Visitor registers for an event
 const registerForEvent = async (req, res) => {
@@ -22,6 +23,7 @@ const registerForEvent = async (req, res) => {
     });
 
     if (existingRSVP) {
+      // Already completely registered
       if (
         existingRSVP.status === "REGISTERED" &&
         existingRSVP.paymentStatus === "PAID"
@@ -31,9 +33,20 @@ const registerForEvent = async (req, res) => {
         });
       }
 
+      // Resume registration
       existingRSVP.status = "REGISTERED";
       existingRSVP.paymentStatus =
         event.visitorFee > 0 ? "PENDING" : "PAID";
+
+      // Free event → generate ticket
+      if (
+        event.visitorFee <= 0 &&
+        !existingRSVP.ticketNumber
+      ) {
+        existingRSVP.ticketNumber =
+          generateTicketNumber("VIS");
+      }
+
       await existingRSVP.save();
 
       return res.status(200).json({
@@ -46,7 +59,16 @@ const registerForEvent = async (req, res) => {
     const rsvp = await RSVP.create({
       event: eventId,
       visitor: req.user.userId,
-      paymentStatus: event.visitorFee > 0 ? "PENDING" : "PAID",
+
+      paymentStatus:
+        event.visitorFee > 0 ? "PENDING" : "PAID",
+
+      // Free event → ticket immediately
+      // Paid event → ticket generated after payment success
+      ticketNumber:
+        event.visitorFee > 0
+          ? undefined
+          : generateTicketNumber("VIS"),
     });
 
     res.status(201).json({
@@ -61,6 +83,7 @@ const registerForEvent = async (req, res) => {
   }
 };
 
+// Visitor sees their registrations
 const getMyRSVPs = async (req, res) => {
   try {
     const rsvps = await RSVP.find({
@@ -83,6 +106,7 @@ const getMyRSVPs = async (req, res) => {
   }
 };
 
+// Admin sees visitors of an event
 const getEventVisitors = async (req, res) => {
   try {
     const rsvps = await RSVP.find({

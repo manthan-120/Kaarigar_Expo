@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import {
   Text,
   TouchableOpacity,
@@ -21,12 +22,14 @@ type Application = {
 type ApplicationCardProps = {
   application: Application;
   onPay?: () => void;
+  onView?: () => void;
   paying?: boolean;
 };
 
 export default function ApplicationCard({
   application,
   onPay,
+  onView,
   paying = false,
 }: ApplicationCardProps) {
   const canPay =
@@ -42,17 +45,33 @@ export default function ApplicationCard({
       </Text>
 
       {/* Date */}
-      <Text className="mt-2 text-[14px] text-[#75665E]">
-        📅{" "}
-        {new Date(
-          application.event.date
-        ).toLocaleDateString()}
-      </Text>
+      <View className="mt-2 flex-row items-center">
+        <Ionicons
+          name="calendar-outline"
+          size={16}
+          color="#75665E"
+        />
+        <Text className="ml-2 text-[14px] text-[#75665E]">
+          {new Date(
+            application.event.date
+          ).toLocaleDateString()}
+        </Text>
+      </View>
 
       {/* Location */}
-      <Text className="mt-1 text-[14px] text-[#75665E]">
-        📍 {application.event.location}
-      </Text>
+      <View className="mt-1 flex-row items-center">
+        <Ionicons
+          name="location-outline"
+          size={16}
+          color="#75665E"
+        />
+        <Text
+          numberOfLines={1}
+          className="ml-2 flex-1 text-[14px] text-[#75665E]"
+        >
+          {application.event.location}
+        </Text>
+      </View>
 
       {/* Application Status */}
       <View className="mt-4 rounded-[10px] bg-[#F4EEE8] px-3 py-2">
@@ -66,6 +85,17 @@ export default function ApplicationCard({
         <Text className="mt-2 text-[13px] text-[#75665E]">
           Payment: {application.paymentStatus}
         </Text>
+      )}
+
+      {onView && (
+        <TouchableOpacity
+          onPress={onView}
+          className="mt-4 items-center rounded-[12px] border border-[#C65D3A] py-3"
+        >
+          <Text className="font-bold text-[#C65D3A]">
+            View Event
+          </Text>
+        </TouchableOpacity>
       )}
 
       {/* Pay Button */}

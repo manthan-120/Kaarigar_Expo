@@ -66,9 +66,13 @@ export default function KaarigarRegisterScreen() {
   return (
     <KeyboardAvoider>
     
-        <Text className="text-[28px] font-extrabold text-[#C65D3A]">
-          KAARIGAR EXPO
-        </Text>
+         <Text className="text-[22px] font-extrabold tracking-[1px] text-[#C65D3A]">
+              KAARIGAR
+          </Text>
+
+          <Text className="text-[10px] font-bold tracking-[4px] text-[#6F8060]">
+              EXPO
+          </Text>
 
         <Text className="mt-6 text-[25px] font-bold text-[#3B2923]">
           Create Kaarigar Account

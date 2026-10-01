@@ -58,9 +58,13 @@ export default function AdminLoginScreen() {
   return (
     <View className="flex-1 bg-[#FFF8EF] px-6">
       <View className="mt-24">
-        <Text className="text-[28px] font-extrabold text-[#C65D3A]">
-          KAARIGAR EXPO
-        </Text>
+         <Text className="text-[22px] font-extrabold tracking-[1px] text-[#C65D3A]">
+              KAARIGAR
+          </Text>
+
+          <Text className="text-[10px] font-bold tracking-[4px] text-[#6F8060]">
+              EXPO
+          </Text>
 
         <Text className="mt-8 text-[26px] font-bold text-[#3B2923]">
           Admin Login
@@ -123,7 +127,7 @@ export default function AdminLoginScreen() {
           className="mt-8 items-center"
         >
           <Text className="text-[14px] font-semibold text-[#6F8060]">
-            ← Back
+            Back
           </Text>
         </TouchableOpacity>
       </View>

@@ -4,6 +4,7 @@ import { api } from "../../services/api";
 import { Ionicons } from "@expo/vector-icons";
 import usePasswordVisibility from "../../hooks/usePasswordVisibility";
 import { useAuth } from "../../hooks/useAuth";
+import KeyboardAvoider from "../../components/KeyboardAvoider";
 import {
   Alert,
   Text,
@@ -62,12 +63,17 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 bg-[#FFF8EF] px-6">
+    <KeyboardAvoider>
+      <View className="bg-[#FFF8EF]">
 
       {/* Header */}
       <View className="mt-20">
-        <Text className="text-[28px] font-extrabold text-[#C65D3A]">
-          KAARIGAR EXPO
+        <Text className="text-[22px] font-extrabold tracking-[1px] text-[#C65D3A]">
+              KAARIGAR
+        </Text>
+
+        <Text className="text-[10px] font-bold tracking-[4px] text-[#6F8060]">
+              EXPO
         </Text>
 
         <Text className="mt-2 text-[24px] font-bold text-[#3B2923]">
@@ -161,10 +167,11 @@ export default function LoginScreen() {
         className="mt-8 items-center"
       >
         <Text className="text-[14px] font-semibold text-[#6F8060]">
-          ← Back
+          Back
         </Text>
       </TouchableOpacity>
 
-    </View>
+      </View>
+    </KeyboardAvoider>
   );
 }

@@ -1,6 +1,9 @@
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
+import ProfileButton from "../../components/ProfileButton";
+import { useAuth } from "../../hooks/useAuth";
 import {
   ActivityIndicator,
   Alert,
@@ -35,7 +38,10 @@ export default function AdminEventsScreen() {
   const [description, setDescription] = useState("");
   const [visitorFee, setVisitorFee] = useState("");
   const [kaarigarFee, setKaarigarFee] = useState("");
-  const [eventImage, setEventImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [eventImage, setEventImage] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
+
+  const { user } = useAuth();
 
   const fetchEvents = async () => {
     try {
@@ -101,7 +107,9 @@ export default function AdminEventsScreen() {
       if (eventImage) {
         formData.append("image", {
           uri: eventImage.uri,
-          name: eventImage.fileName || `event-${Date.now()}.jpg`,
+          name:
+            eventImage.fileName ||
+            `event-${Date.now()}.jpg`,
           type: eventImage.mimeType || "image/jpeg",
         } as unknown as Blob);
       }
@@ -146,12 +154,13 @@ export default function AdminEventsScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.85,
-    });
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.85,
+      });
 
     if (!result.canceled) {
       setEventImage(result.assets[0]);
@@ -162,21 +171,36 @@ export default function AdminEventsScreen() {
     <ScrollView
       className="flex-1 bg-[#FFF8EF]"
       contentContainerStyle={{
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         paddingTop: 60,
         paddingBottom: 40,
       }}
       keyboardShouldPersistTaps="handled"
     >
-      <TouchableOpacity onPress={() => router.back()}>
+      {/* Top Branding */}
+      <View className="mb-6 flex-row items-start justify-between">
+        <View>
+          <Text className="text-[22px] font-extrabold tracking-[1px] text-[#C65D3A]">
+            KAARIGAR
+          </Text>
+
+          <Text className="text-[10px] font-bold tracking-[4px] text-[#6F8060]">
+            EXPO
+          </Text>
+        </View>
+
+        <ProfileButton />
+      </View>
+      
+      {/* Back */}
+      <TouchableOpacity
+        onPress={() => router.back()}
+        className="mt-6"
+      >
         <Text className="font-semibold text-[#C65D3A]">
           ← Back
         </Text>
       </TouchableOpacity>
-
-      <Text className="mt-6 text-[28px] font-extrabold text-[#C65D3A]">
-        KAARIGAR EXPO
-      </Text>
 
       <Text className="mt-6 text-[25px] font-bold text-[#3B2923]">
         Manage Melas
@@ -268,6 +292,7 @@ export default function AdminEventsScreen() {
         className="rounded-[14px] border border-[#E5D8CC] bg-white px-4 py-4"
       />
 
+      {/* Create Mela */}
       <TouchableOpacity
         onPress={handleCreateEvent}
         disabled={creating}
@@ -278,18 +303,24 @@ export default function AdminEventsScreen() {
         </Text>
       </TouchableOpacity>
 
+      {/* Event Image */}
       <TouchableOpacity
         onPress={pickEventImage}
         className="mt-5 rounded-[14px] border border-[#E5D8CC] bg-white p-4"
       >
         <Text className="font-semibold text-[#3B2923]">
-          {eventImage ? "Change Event Image" : "Choose Event Image"}
+          {eventImage
+            ? "Change Event Image"
+            : "Choose Event Image"}
         </Text>
+
         <Text className="mt-1 text-[13px] text-[#75665E]">
-          {eventImage?.fileName || "Optional image uploaded to Cloudinary"}
+          {eventImage?.fileName ||
+            "Optional image uploaded to Cloudinary"}
         </Text>
       </TouchableOpacity>
 
+      {/* Selected Image Preview */}
       {eventImage ? (
         <Image
           source={{ uri: eventImage.uri }}
@@ -305,7 +336,10 @@ export default function AdminEventsScreen() {
 
       {loading ? (
         <View className="items-center py-6">
-          <ActivityIndicator size="small" color="#C65D3A" />
+          <ActivityIndicator
+            size="small"
+            color="#C65D3A"
+          />
         </View>
       ) : events.length === 0 ? (
         <View className="rounded-[16px] bg-white p-5">
@@ -319,6 +353,7 @@ export default function AdminEventsScreen() {
             key={event._id}
             className="mb-3 rounded-[16px] bg-white p-5"
           >
+            {/* Event Image */}
             {event.image ? (
               <Image
                 source={{ uri: event.image }}
@@ -327,18 +362,43 @@ export default function AdminEventsScreen() {
               />
             ) : null}
 
+            {/* Event Name */}
             <Text className="text-[17px] font-bold text-[#3B2923]">
               {event.name}
             </Text>
 
-            <Text className="mt-2 text-[13px] text-[#75665E]">
-              📅 {new Date(event.date).toLocaleDateString()}
-            </Text>
+            {/* Date */}
+            <View className="mt-4 flex-row items-center">
+              <Ionicons
+                name="calendar-outline"
+                size={18}
+                color="#75665E"
+              />
 
-            <Text className="mt-1 text-[13px] text-[#75665E]">
-              📍 {event.location}
-            </Text>
+              <Text className="ml-2 text-[15px] text-[#75665E]">
+                {new Date(
+                  event.date
+                ).toLocaleDateString()}
+              </Text>
+            </View>
 
+            {/* Location */}
+            <View className="mt-2 flex-row items-center">
+              <Ionicons
+                name="location-outline"
+                size={18}
+                color="#75665E"
+              />
+
+              <Text
+                numberOfLines={1}
+                className="ml-2 flex-1 text-[15px] text-[#75665E]"
+              >
+                {event.location}
+              </Text>
+            </View>
+
+            {/* Fees */}
             <Text className="mt-2 text-[13px] text-[#C65D3A]">
               Visitor: ₹{event.visitorFee} | Kaarigar: ₹
               {event.kaarigarFee}

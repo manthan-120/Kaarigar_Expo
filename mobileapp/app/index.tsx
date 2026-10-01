@@ -8,9 +8,13 @@ export default function WelcomeScreen() {
       <View className="flex-1 items-center justify-center px-6">
 
         {/* Logo */}
-        <Text className="text-[28px] font-extrabold tracking-[1px] text-[#C65D3A]">
-          KAARIGAR EXPO
-        </Text>
+         <Text className="text-[32px] font-extrabold tracking-[1px] text-[#C65D3A]">
+              KAARIGAR
+          </Text>
+
+          <Text className="text-[14px] font-bold tracking-[4px] text-[#6F8060]">
+              EXPO
+          </Text>
 
         <Text className="mt-1.5 w-full text-center text-[14px] tracking-[1px] text-[#6F8060]">
           Craft • Culture • Community

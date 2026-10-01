@@ -25,6 +25,13 @@ const rsvpSchema = new mongoose.Schema(
       enum: ["PENDING", "PAID", "REFUNDED"],
       default: "PENDING",
     },
+
+     ticketNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
   },
   {
     timestamps: true,

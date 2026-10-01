@@ -1,4 +1,5 @@
 import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 type Event = {
   _id: string;
@@ -25,7 +26,7 @@ export default function EventCard({
   actionLabel,
 }: EventCardProps) {
   const content = (
-    <>
+    <View className="flex-1">
       {/* Event Image */}
       {event.image ? (
         <Image
@@ -47,50 +48,85 @@ export default function EventCard({
       )}
 
       {/* Event Name */}
-      <Text className="text-[19px] font-bold text-[#3B2923]">
+      <Text
+        numberOfLines={2}
+        className="h-[48px] text-[19px] font-bold text-[#3B2923]"
+      >
         {event.name}
       </Text>
 
       {/* Date */}
-      <Text className="mt-2 text-[14px] text-[#75665E]">
-        📅 {new Date(event.date).toLocaleDateString()}
-      </Text>
+      <View className="mt-4 flex-row items-center">
+        <Ionicons
+          name="calendar-outline"
+          size={18}
+          color="#75665E"
+        />
+
+        <Text className="ml-2 text-[15px] text-[#75665E]">
+          {new Date(event.date).toLocaleDateString()}
+        </Text>
+      </View>
 
       {/* Location */}
-      <Text className="mt-1 text-[14px] text-[#75665E]">
-        📍 {event.location}
-      </Text>
+      <View className="mt-2 flex-row items-center">
+        <Ionicons
+          name="location-outline"
+          size={18}
+          color="#75665E"
+        />
 
-      {/* Description */}
-      {event.description && (
-        <Text className="mt-3 text-[14px] leading-[21px] text-[#75665E]">
-          {event.description}
+        <Text
+          numberOfLines={1}
+          className="ml-2 flex-1 text-[15px] text-[#75665E]"
+        >
+          {event.location}
         </Text>
-      )}
+      </View>
 
-      {/* Fee */}
-      {fee !== undefined && feeLabel && (
-        <View className="mt-4 rounded-[12px] bg-[#FFF8EF] p-3">
-          <Text className="text-[13px] font-semibold text-[#3B2923]">
-            {feeLabel}: ₹{fee}
+      {/* Description - fixed space */}
+      <View className="mt-3 h-[63px]">
+        {event.description ? (
+          <Text
+            numberOfLines={3}
+            className="text-[14px] leading-[21px] text-[#75665E]"
+          >
+            {event.description}
           </Text>
-        </View>
-      )}
+        ) : null}
+      </View>
 
-      {/* Action */}
-      {actionLabel && (
-        <Text className="mt-4 text-center font-bold text-[#C65D3A]">
-          {actionLabel}
-        </Text>
-      )}
-    </>
+      {/* Fee - always reserves same space */}
+      <View className="mt-4 h-[48px] justify-center">
+        {fee !== undefined && feeLabel ? (
+          <View className="justify-center rounded-[12px] bg-[#FFF8EF] p-3">
+            <Text
+              numberOfLines={2}
+              className="text-[13px] font-semibold text-[#3B2923]"
+            >
+              {feeLabel}: ₹{fee}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Action - always at bottom */}
+      <View className="mt-auto min-h-[24px] justify-end">
+        {actionLabel ? (
+          <Text className="text-center font-bold text-[#C65D3A]">
+            {actionLabel}
+          </Text>
+        ) : null}
+      </View>
+    </View>
   );
 
   if (onPress) {
     return (
       <TouchableOpacity
         onPress={onPress}
-        className="mb-4 rounded-[18px] bg-white p-5"
+        className="mb-4 h-[500px] rounded-[18px] bg-white p-5"
+        activeOpacity={0.8}
       >
         {content}
       </TouchableOpacity>
@@ -98,7 +134,7 @@ export default function EventCard({
   }
 
   return (
-    <View className="mb-4 rounded-[18px] bg-white p-5">
+    <View className="mb-4 h-[500px] rounded-[18px] bg-white p-5">
       {content}
     </View>
   );

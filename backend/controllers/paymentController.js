@@ -6,6 +6,7 @@ const Application = require("../models/application");
 const RSVP = require("../models/rsvp");
 const Payment = require("../models/payment");
 const User = require("../models/user");
+const { generateTicketNumber } = require("../utils/ticketGen");
 
 let cashfree;
 
@@ -66,23 +67,32 @@ const completeVisitorRsvp = async (payment) => {
     return;
   }
 
-  const rsvp = await RSVP.findOneAndUpdate(
-    {
+  let rsvp = await RSVP.findOne({
+    event: payment.event,
+    visitor: payment.user,
+  });
+
+  if (!rsvp) {
+    rsvp = await RSVP.create({
       event: payment.event,
       visitor: payment.user,
-    },
-    {
-      $set: {
-        status: "REGISTERED",
-        paymentStatus: "PAID",
-      },
-    },
-    {
-      new: true,
-      upsert: true,
-      setDefaultsOnInsert: true,
+      status: "REGISTERED",
+      paymentStatus: "PAID",
+      ticketNumber: generateTicketNumber("VIS"),
+    });
+  } else {
+    rsvp.status = "REGISTERED";
+    rsvp.paymentStatus = "PAID";
+
+    // Generate only once.
+    // If payment verification happens again,
+    // the same ticket number is preserved.
+    if (!rsvp.ticketNumber) {
+      rsvp.ticketNumber = generateTicketNumber("VIS");
     }
-  );
+
+    await rsvp.save();
+  }
 
   payment.rsvp = rsvp._id;
 };
@@ -252,12 +262,23 @@ const finalizeSuccessfulPayment = async (
     payment.purpose === "KAARIGAR_APPLICATION" &&
     payment.application
   ) {
-    await Application.findByIdAndUpdate(
-      payment.application,
-      {
-        paymentStatus: "PAID",
-      }
+    const application = await Application.findById(
+      payment.application
     );
+
+    if (application) {
+      application.paymentStatus = "PAID";
+
+      // Generate only once.
+      // Repeated payment verification will keep
+      // the same ticket number.
+      if (!application.ticketNumber) {
+        application.ticketNumber =
+          generateTicketNumber("KRG");
+      }
+
+      await application.save();
+    }
   }
 
   return payment;

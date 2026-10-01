@@ -39,7 +39,14 @@ const applicationSchema = new mongoose.Schema(
       type: String,
       enum: ["UNPAID", "PAID", "REFUNDED"],
       default: "UNPAID",
-},
+    },
+
+        ticketNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
   },
   {
     timestamps: true,

@@ -84,7 +84,7 @@ export default function EventCard({
             onClick={() => navigate(`/events/${id}`)}
             className="mt-6 w-full rounded-lg bg-[#c65d3a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b45131]"
           >
-            View Event →
+            View Event
           </button>
         )}
       </div>

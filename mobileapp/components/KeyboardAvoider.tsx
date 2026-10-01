@@ -39,18 +39,23 @@ export default function KeyboardAvoider({
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1, backgroundColor: "#FFF8EF" }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         className="flex-1 bg-[#FFF8EF]"
         contentContainerStyle={{
+          flexGrow: 1,
+          backgroundColor: "#FFF8EF",
           paddingHorizontal: 24,
           paddingTop: 60,
           paddingBottom:
-            keyboardHeight > 0 ? keyboardHeight + 80 : 40,
+            keyboardHeight > 0 ? keyboardHeight + 160 : 120,
         }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        bounces={false}
+        overScrollMode="never"
         showsVerticalScrollIndicator={false}
       >
         {children}
@@ -58,3 +63,4 @@ export default function KeyboardAvoider({
     </KeyboardAvoidingView>
   );
 }
+

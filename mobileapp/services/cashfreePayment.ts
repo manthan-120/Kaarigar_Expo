@@ -1,5 +1,6 @@
 // 
 
+import { AppState } from "react-native";
 import * as Linking from "expo-linking";
 
 type PaymentParams = {
@@ -19,17 +20,30 @@ export const openCashfreeCheckout = async ({
 }: PaymentParams): Promise<PaymentResult> => {
   return new Promise(async (resolve, reject) => {
     let timeout: ReturnType<typeof setTimeout> | null = null;
+    let cancelTimer: ReturnType<typeof setTimeout> | null = null;
+    let leftApp = false;
+    let settled = false;
 
-    const subscription = Linking.addEventListener("url", ({ url }) => {
+    const cleanup = () => {
+      if (timeout) clearTimeout(timeout);
+      if (cancelTimer) clearTimeout(cancelTimer);
+      urlSubscription.remove();
+      appStateSubscription.remove();
+    };
+
+    const cancelPayment = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error("Payment was cancelled before completion."));
+    };
+
+    const urlSubscription = Linking.addEventListener("url", ({ url }) => {
       if (!url.startsWith(redirectUrl)) {
         return;
       }
 
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-
-      subscription.remove();
+      if (settled) return;
 
       const parsed = Linking.parse(url);
 
@@ -44,10 +58,14 @@ export const openCashfreeCheckout = async ({
           : "";
 
       if (!orderId) {
+        settled = true;
+        cleanup();
         reject(new Error("Payment order ID was not received."));
         return;
       }
 
+      settled = true;
+      cleanup();
       resolve({
         type: "payment-result",
         orderId,
@@ -55,19 +73,33 @@ export const openCashfreeCheckout = async ({
       });
     });
 
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (nextState) => {
+        if (nextState === "background" || nextState === "inactive") {
+          leftApp = true;
+          return;
+        }
+
+        if (nextState === "active" && leftApp && !settled) {
+          cancelTimer = setTimeout(cancelPayment, 700);
+        }
+      }
+    );
+
     try {
       await Linking.openURL(checkoutUrl);
 
       timeout = setTimeout(() => {
-        subscription.remove();
-        reject(
-          new Error(
-            "Payment was not completed or the app did not receive the payment result."
-          )
-        );
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error("Payment timed out before completion."));
       }, 10 * 60 * 1000);
     } catch (error) {
-      subscription.remove();
+      if (settled) return;
+      settled = true;
+      cleanup();
 
       reject(
         error instanceof Error
