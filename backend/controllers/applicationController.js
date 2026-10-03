@@ -75,7 +75,7 @@ const getAllApplications = async (req, res) => {
   try {
     const applications = await Application.find()
       .populate("event", "name date location")
-      .populate("kaarigar", "name email ticketNumber")
+      .populate("kaarigar", "name email")
       .sort({ createdAt: -1 });
 
     res.json({
