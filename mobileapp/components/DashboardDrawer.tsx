@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
+import { useAuth } from "../hooks/useAuth";
 
 const DRAWER_WIDTH = Dimensions.get("window").width * 0.78;
 
@@ -23,6 +24,7 @@ export default function DashboardDrawer({
   onClose,
   role,
 }: DashboardDrawerProps) {
+  const { logout } = useAuth();
   // Controls whether the Modal is mounted
   const [mounted, setMounted] = useState(visible);
 
@@ -49,13 +51,13 @@ export default function DashboardDrawer({
       Animated.parallel([
         Animated.timing(slideX, {
           toValue: 0,
-          duration: 500,
+          duration: 250,
           useNativeDriver: true,
         }),
 
         Animated.timing(overlayOpacity, {
           toValue: 1,
-          duration: 500,
+          duration: 250,
           useNativeDriver: true,
         }),
       ]).start();
@@ -64,13 +66,13 @@ export default function DashboardDrawer({
       Animated.parallel([
         Animated.timing(slideX, {
           toValue: DRAWER_WIDTH,
-          duration: 250,
+          duration: 180,
           useNativeDriver: true,
         }),
 
         Animated.timing(overlayOpacity, {
           toValue: 0,
-          duration: 250,
+          duration: 180,
           useNativeDriver: true,
         }),
       ]).start(() => {
@@ -238,16 +240,16 @@ export default function DashboardDrawer({
             {/* PAYMENT HISTORY */}
             {/* ================================= */}
 
-            <TouchableOpacity
-              className="mb-7"
-              onPress={() =>
-                navigate("/payment-history")
-              }
-            >
-              <Text className="text-[16px] font-semibold text-[#3B2923]">
-                Payment History
-              </Text>
-            </TouchableOpacity>
+            {role !== "ADMIN" && (
+              <TouchableOpacity
+                className="mb-7"
+                onPress={() => navigate("/payment-history")}
+              >
+                <Text className="text-[16px] font-semibold text-[#3B2923]">
+                  Payment History
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* ================================= */}
             {/* DIVIDER */}
@@ -261,13 +263,11 @@ export default function DashboardDrawer({
 
             <TouchableOpacity
               className="mt-6"
-              onPress={() => {
-                onClose();
-
-                // Keep your existing logout logic here.
-                // Example:
-                // logout();
-              }}
+              onPress={async () => {
+                  onClose();
+                  await logout();
+                  router.replace("/");
+                }}
             >
               <Text className="text-[16px] font-bold text-[#C65D3A]">
                 Logout

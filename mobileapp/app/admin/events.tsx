@@ -1,19 +1,18 @@
-import { router } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
-import ProfileButton from "../../components/ProfileButton";
-import { useAuth } from "../../hooks/useAuth";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  RefreshControl,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
+import ProfileButton from "../../components/ProfileButton";
 import { api } from "../../services/api";
 
 type Event = {
@@ -30,23 +29,15 @@ type Event = {
 export default function AdminEventsScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-
-  const [name, setName] = useState("");
-  const [date, setDate] = useState("");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
-  const [visitorFee, setVisitorFee] = useState("");
-  const [kaarigarFee, setKaarigarFee] = useState("");
-  const [eventImage, setEventImage] =
-    useState<ImagePicker.ImagePickerAsset | null>(null);
-
-  const { user } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchEvents = async () => {
     try {
+      setLoading(true);
+
       const data = await api("/events");
-      setEvents(data.events);
+
+      setEvents(data.events || []);
     } catch (error) {
       Alert.alert(
         "Error",
@@ -56,356 +47,220 @@ export default function AdminEventsScreen() {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  const handleCreateEvent = async () => {
-    if (
-      !name ||
-      !date ||
-      !location ||
-      !visitorFee ||
-      !kaarigarFee
-    ) {
-      Alert.alert(
-        "Missing Details",
-        "Please fill all required fields."
-      );
-      return;
-    }
-
-    const visitorFeeNumber = Number(visitorFee);
-    const kaarigarFeeNumber = Number(kaarigarFee);
-
-    if (
-      Number.isNaN(visitorFeeNumber) ||
-      Number.isNaN(kaarigarFeeNumber)
-    ) {
-      Alert.alert(
-        "Invalid Fee",
-        "Please enter valid numbers for the fees."
-      );
-      return;
-    }
-
-    try {
-      setCreating(true);
-
-      const formData = new FormData();
-
-      formData.append("name", name);
-      formData.append("date", date);
-      formData.append("location", location);
-      formData.append("description", description);
-      formData.append("visitorFee", String(visitorFeeNumber));
-      formData.append("kaarigarFee", String(kaarigarFeeNumber));
-
-      if (eventImage) {
-        formData.append("image", {
-          uri: eventImage.uri,
-          name:
-            eventImage.fileName ||
-            `event-${Date.now()}.jpg`,
-          type: eventImage.mimeType || "image/jpeg",
-        } as unknown as Blob);
-      }
-
-      const data = await api("/events", {
-        method: "POST",
-        body: formData,
-      });
-
-      Alert.alert("Success", data.message);
-
-      setName("");
-      setDate("");
-      setLocation("");
-      setDescription("");
-      setVisitorFee("");
-      setKaarigarFee("");
-      setEventImage(null);
-
+  useFocusEffect(
+    useCallback(() => {
       fetchEvents();
-    } catch (error) {
-      Alert.alert(
-        "Creation Failed",
-        error instanceof Error
-          ? error.message
-          : "Something went wrong"
-      );
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const pickEventImage = async () => {
-    const permission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert(
-        "Permission Required",
-        "Allow photo library access to choose an event image."
-      );
-      return;
-    }
-
-    const result =
-      await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.85,
-      });
-
-    if (!result.canceled) {
-      setEventImage(result.assets[0]);
-    }
-  };
+    }, [])
+  );
 
   return (
-    <ScrollView
-      className="flex-1 bg-[#FFF8EF]"
-      contentContainerStyle={{
-        paddingHorizontal: 20,
-        paddingTop: 60,
-        paddingBottom: 40,
-      }}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* Top Branding */}
-      <View className="mb-6 flex-row items-start justify-between">
-        <View>
-          <Text className="text-[22px] font-extrabold tracking-[1px] text-[#C65D3A]">
-            KAARIGAR
-          </Text>
-
-          <Text className="text-[10px] font-bold tracking-[4px] text-[#6F8060]">
-            EXPO
-          </Text>
-        </View>
-
-        <ProfileButton />
-      </View>
-      
-      {/* Back */}
-      <TouchableOpacity
-        onPress={() => router.back()}
-        className="mt-6"
-      >
-        <Text className="font-semibold text-[#C65D3A]">
-          ← Back
-        </Text>
-      </TouchableOpacity>
-
-      <Text className="mt-6 text-[25px] font-bold text-[#3B2923]">
-        Manage Melas
-      </Text>
-
-      <Text className="mt-2 text-[14px] text-[#75665E]">
-        Create and manage upcoming exhibitions.
-      </Text>
-
-      {/* Event Name */}
-      <Text className="mb-2 mt-8 text-[14px] font-semibold text-[#3B2923]">
-        Event Name
-      </Text>
-
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder="Enter event name"
-        placeholderTextColor="#A89B94"
-        className="rounded-[14px] border border-[#E5D8CC] bg-white px-4 py-4"
-      />
-
-      {/* Date */}
-      <Text className="mb-2 mt-5 text-[14px] font-semibold text-[#3B2923]">
-        Date
-      </Text>
-
-      <TextInput
-        value={date}
-        onChangeText={setDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor="#A89B94"
-        className="rounded-[14px] border border-[#E5D8CC] bg-white px-4 py-4"
-      />
-
-      {/* Location */}
-      <Text className="mb-2 mt-5 text-[14px] font-semibold text-[#3B2923]">
-        Location
-      </Text>
-
-      <TextInput
-        value={location}
-        onChangeText={setLocation}
-        placeholder="Enter event location"
-        placeholderTextColor="#A89B94"
-        className="rounded-[14px] border border-[#E5D8CC] bg-white px-4 py-4"
-      />
-
-      {/* Description */}
-      <Text className="mb-2 mt-5 text-[14px] font-semibold text-[#3B2923]">
-        Description
-      </Text>
-
-      <TextInput
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Enter event description"
-        placeholderTextColor="#A89B94"
-        multiline
-        textAlignVertical="top"
-        className="min-h-[100px] rounded-[14px] border border-[#E5D8CC] bg-white px-4 py-4"
-      />
-
-      {/* Visitor Fee */}
-      <Text className="mb-2 mt-5 text-[14px] font-semibold text-[#3B2923]">
-        Visitor Fee
-      </Text>
-
-      <TextInput
-        value={visitorFee}
-        onChangeText={setVisitorFee}
-        placeholder="Enter visitor fee"
-        placeholderTextColor="#A89B94"
-        keyboardType="numeric"
-        className="rounded-[14px] border border-[#E5D8CC] bg-white px-4 py-4"
-      />
-
-      {/* Kaarigar Fee */}
-      <Text className="mb-2 mt-5 text-[14px] font-semibold text-[#3B2923]">
-        Kaarigar Fee
-      </Text>
-
-      <TextInput
-        value={kaarigarFee}
-        onChangeText={setKaarigarFee}
-        placeholder="Enter kaarigar fee"
-        placeholderTextColor="#A89B94"
-        keyboardType="numeric"
-        className="rounded-[14px] border border-[#E5D8CC] bg-white px-4 py-4"
-      />
-
-      {/* Create Mela */}
-      <TouchableOpacity
-        onPress={handleCreateEvent}
-        disabled={creating}
-        className="mt-7 items-center rounded-[14px] bg-[#C65D3A] py-4"
-      >
-        <Text className="text-[16px] font-bold text-white">
-          {creating ? "Creating..." : "Create Mela"}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Event Image */}
-      <TouchableOpacity
-        onPress={pickEventImage}
-        className="mt-5 rounded-[14px] border border-[#E5D8CC] bg-white p-4"
-      >
-        <Text className="font-semibold text-[#3B2923]">
-          {eventImage
-            ? "Change Event Image"
-            : "Choose Event Image"}
-        </Text>
-
-        <Text className="mt-1 text-[13px] text-[#75665E]">
-          {eventImage?.fileName ||
-            "Optional image uploaded to Cloudinary"}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Selected Image Preview */}
-      {eventImage ? (
-        <Image
-          source={{ uri: eventImage.uri }}
-          className="mt-3 h-48 w-full rounded-[14px]"
-          resizeMode="cover"
-        />
-      ) : null}
-
-      {/* Existing Events */}
-      <Text className="mb-4 mt-10 text-[20px] font-bold text-[#3B2923]">
-        Existing Melas
-      </Text>
-
-      {loading ? (
-        <View className="items-center py-6">
-          <ActivityIndicator
-            size="small"
-            color="#C65D3A"
+    <View className="flex-1 bg-[#FFF8EF]">
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 60,
+          paddingBottom: 50,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchEvents();
+            }}
+            tintColor="#C65D3A"
           />
-        </View>
-      ) : events.length === 0 ? (
-        <View className="rounded-[16px] bg-white p-5">
-          <Text className="text-center text-[#75665E]">
-            No melas created yet.
-          </Text>
-        </View>
-      ) : (
-        events.map((event) => (
-          <View
-            key={event._id}
-            className="mb-3 rounded-[16px] bg-white p-5"
-          >
-            {/* Event Image */}
-            {event.image ? (
-              <Image
-                source={{ uri: event.image }}
-                className="mb-4 h-40 w-full rounded-[14px]"
-                resizeMode="cover"
-              />
-            ) : null}
-
-            {/* Event Name */}
-            <Text className="text-[17px] font-bold text-[#3B2923]">
-              {event.name}
+        }
+      >
+        {/* Header */}
+        <View className="mb-6 flex-row items-start justify-between">
+          <View>
+            <Text className="text-[22px] font-extrabold tracking-[1px] text-[#C65D3A]">
+              KAARIGAR
             </Text>
 
-            {/* Date */}
-            <View className="mt-4 flex-row items-center">
-              <Ionicons
-                name="calendar-outline"
-                size={18}
-                color="#75665E"
-              />
-
-              <Text className="ml-2 text-[15px] text-[#75665E]">
-                {new Date(
-                  event.date
-                ).toLocaleDateString()}
-              </Text>
-            </View>
-
-            {/* Location */}
-            <View className="mt-2 flex-row items-center">
-              <Ionicons
-                name="location-outline"
-                size={18}
-                color="#75665E"
-              />
-
-              <Text
-                numberOfLines={1}
-                className="ml-2 flex-1 text-[15px] text-[#75665E]"
-              >
-                {event.location}
-              </Text>
-            </View>
-
-            {/* Fees */}
-            <Text className="mt-2 text-[13px] text-[#C65D3A]">
-              Visitor: ₹{event.visitorFee} | Kaarigar: ₹
-              {event.kaarigarFee}
+            <Text className="text-[10px] font-bold tracking-[4px] text-[#6F8060]">
+              EXPO
             </Text>
           </View>
-        ))
-      )}
-    </ScrollView>
+
+          <ProfileButton />
+        </View>
+
+        {/* Back */}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="mt-6"
+        >
+          <Text className="font-semibold text-[#C65D3A]">
+            Back
+          </Text>
+        </TouchableOpacity>
+
+        {/* Title */}
+        <Text className="mt-6 text-[25px] font-bold text-[#3B2923]">
+          Events
+        </Text>
+
+        <Text className="mt-2 text-[14px] text-[#75665E]">
+          View and manage all melas.
+        </Text>
+
+        {/* Create Mela */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push("/admin/create-event")}
+          className="mt-7 flex-row items-center justify-center rounded-[14px] bg-[#C65D3A] py-4"
+        >
+          <Ionicons
+            name="add"
+            size={20}
+            color="#FFFFFF"
+          />
+
+          <Text className="ml-2 text-[16px] font-bold text-white">
+            Create Mela
+          </Text>
+        </TouchableOpacity>
+
+        {/* All Melas */}
+        <Text className="mb-4 mt-9 text-[20px] font-bold text-[#3B2923]">
+          All Melas
+        </Text>
+
+        {/* Loading */}
+        {loading ? (
+          <View className="items-center py-10">
+            <ActivityIndicator
+              size="large"
+              color="#C65D3A"
+            />
+
+            <Text className="mt-3 text-[13px] text-[#75665E]">
+              Loading melas...
+            </Text>
+          </View>
+        ) : events.length === 0 ? (
+          /* Empty State */
+          <View className="items-center rounded-[20px] bg-white px-5 py-10">
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-[#FFF8EF]">
+              <Ionicons
+                name="calendar-outline"
+                size={25}
+                color="#C65D3A"
+              />
+            </View>
+
+            <Text className="mt-4 text-[16px] font-bold text-[#3B2923]">
+              No melas yet
+            </Text>
+
+            <Text className="mt-1 text-center text-[13px] text-[#75665E]">
+              Create your first mela using the button above.
+            </Text>
+          </View>
+        ) : (
+          /* Events */
+          events.map((event) => (
+            <View
+              key={event._id}
+              className="mb-4 rounded-[20px] bg-white p-5"
+            >
+              {/* Event Image */}
+              {event.image ? (
+                <Image
+                  source={{ uri: event.image }}
+                  className="mb-4 h-44 w-full rounded-[14px]"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="mb-4 h-44 w-full items-center justify-center rounded-[14px] bg-[#E5D8CC]">
+                  <Ionicons
+                    name="image-outline"
+                    size={28}
+                    color="#9A8A80"
+                  />
+
+                  <Text className="mt-2 text-[12px] text-[#75665E]">
+                    No image available
+                  </Text>
+                </View>
+              )}
+
+              {/* Event Name */}
+              <Text className="text-[18px] font-bold text-[#3B2923]">
+                {event.name}
+              </Text>
+
+              {/* Date */}
+              <View className="mt-4 flex-row items-center">
+                <Ionicons
+                  name="calendar-outline"
+                  size={17}
+                  color="#75665E"
+                />
+
+                <Text className="ml-2 text-[14px] text-[#75665E]">
+                  {new Date(
+                    event.date
+                  ).toLocaleDateString()}
+                </Text>
+              </View>
+
+              {/* Location */}
+              <View className="mt-2 flex-row items-center">
+                <Ionicons
+                  name="location-outline"
+                  size={17}
+                  color="#75665E"
+                />
+
+                <Text
+                  numberOfLines={1}
+                  className="ml-2 flex-1 text-[14px] text-[#75665E]"
+                >
+                  {event.location}
+                </Text>
+              </View>
+
+              {/* Description */}
+              {event.description ? (
+                <Text
+                  numberOfLines={3}
+                  className="mt-3 text-[13px] leading-[19px] text-[#75665E]"
+                >
+                  {event.description}
+                </Text>
+              ) : null}
+
+              {/* Fees */}
+              <View className="mt-4 rounded-[12px] bg-[#FFF8EF] p-3">
+                <Text className="text-[12px] font-semibold text-[#75665E]">
+                  Visitor Fee
+                </Text>
+
+                <Text className="mt-1 text-[14px] font-bold text-[#C65D3A]">
+                  ₹{event.visitorFee}
+                </Text>
+
+                <Text className="mt-2 text-[12px] font-semibold text-[#75665E]">
+                  Kaarigar Fee
+                </Text>
+
+                <Text className="mt-1 text-[14px] font-bold text-[#C65D3A]">
+                  ₹{event.kaarigarFee}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 }

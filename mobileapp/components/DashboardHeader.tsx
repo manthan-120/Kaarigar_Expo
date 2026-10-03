@@ -21,7 +21,7 @@ export default function DashboardHeader({
 
       <Pressable
         onPress={onMenuPress}
-        className="h-11 w-11 items-center justify-center rounded-full bg-white"
+        className="h-11 w-11 items-center justify-center"
       >
         <Ionicons
           name="menu-outline"

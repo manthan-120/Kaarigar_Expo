@@ -5,6 +5,7 @@ import { useEvents } from "../hooks/useEvents";
 import { api } from "../services/api";
 import EventCard from "../components/EventCard";
 import Navbar from "../components/Navbar";
+import { CalendarDays, MapPin } from "lucide-react";
 
 type Registration = {
   _id: string;
@@ -230,23 +231,22 @@ export default function Visitor() {
                             {event?.name || "Event"}
                           </h3>
 
-                          <div className="mt-3 space-y-1 text-sm text-[#75665e]">
-
+                          <div className="mt-3 space-y-2 text-sm text-[#75665e]">
                             {event?.date && (
-                              <p>
-                                📅{" "}
-                                {new Date(
-                                  event.date
-                                ).toLocaleDateString()}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <CalendarDays size={16} strokeWidth={1.8} />
+                                <span>
+                                  {new Date(event.date).toLocaleDateString()}
+                                </span>
+                              </div>
                             )}
 
                             {event?.location && (
-                              <p>
-                                📍 {event.location}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <MapPin size={16} strokeWidth={1.8} />
+                                <span>{event.location}</span>
+                              </div>
                             )}
-
                           </div>
 
                           {registration.createdAt && (

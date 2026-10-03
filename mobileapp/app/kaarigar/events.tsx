@@ -9,7 +9,6 @@ import {
   View,
 } from "react-native";
 import EventCard from "../../components/EventCard";
-import ProfileButton from "../../components/ProfileButton";
 import { api } from "../../services/api";
 
 type Event = {
@@ -69,21 +68,18 @@ export default function KaarigarEventsScreen() {
           paddingTop: 60,
           paddingBottom: 40,
         }}
+        showsVerticalScrollIndicator={false}
       >
         <View className="mb-3 flex-row items-center justify-between">
           <TouchableOpacity onPress={() => router.back()}>
             <Text className="font-semibold text-[#C65D3A]">Back</Text>
           </TouchableOpacity>
-          <ProfileButton />
         </View>
 
-        <Text className="text-[28px] font-extrabold text-[#C65D3A]">
-          KAARIGAR EXPO
-        </Text>
-        <Text className="mt-2 text-[25px] font-bold text-[#3B2923]">
+        <Text className="mt-2 text-[22px] font-bold text-[#C65D3A]">
           All Events
         </Text>
-        <Text className="mt-2 text-[14px] text-[#75665E]">
+        <Text className="mt-2 text-[13px] text-[#75665E]">
           Explore every upcoming mela and event.
         </Text>
 

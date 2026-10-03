@@ -6,6 +6,7 @@ import { payWithCashfree } from "../services/payment";
 import EventCard from "../components/EventCard";
 import { useEvents } from "../hooks/useEvents";
 import Navbar from "../components/Navbar";
+import { CalendarDays, MapPin } from "lucide-react";
 
 type Application = {
   _id: string;
@@ -345,19 +346,29 @@ export default function Kaarigar() {
                         <div className="mt-3 space-y-1 text-sm text-[#75665e]">
 
                           {application.event?.date && (
-                            <p>
-                              📅{" "}
-                              {new Date(
-                                application.event.date
-                              ).toLocaleDateString()}
-                            </p>
+                             <div className="flex items-center gap-2">
+                                <CalendarDays
+                                  size={16}
+                                  strokeWidth={1.8}
+                                />
+
+                                <span>
+                                  {new Date(
+                                    application.event.date
+                                  ).toLocaleDateString()}
+                                </span>
+                              </div>
                           )}
 
                           {application.event?.location && (
-                            <p>
-                              📍{" "}
-                              {application.event.location}
-                            </p>
+                           <div className="flex items-center gap-2">
+                              <MapPin
+                                size={16}
+                                strokeWidth={1.8}
+                              />
+
+                              <span>{application.event.location}</span>
+                            </div>
                           )}
 
                         </div>

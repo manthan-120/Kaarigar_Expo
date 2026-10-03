@@ -646,7 +646,7 @@ export default function EventDetailsScreen() {
                   ? "Processing Payment..."
                   : "Registering..."
                 : event.visitorFee > 0
-                  ? "Pay & Register"
+                  ? "Register"
                   : "Register for Event"}
           </Text>
         </TouchableOpacity>

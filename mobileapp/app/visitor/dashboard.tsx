@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useEffect, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import EventCarousel from "../../components/EventCarrousel";
 import {
@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  BackHandler,
 } from "react-native";
 
 import EventCard from "../../components/EventCard";
@@ -43,6 +44,37 @@ export default function VisitorDashboard() {
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   const { user } = useAuth();
+
+  useFocusEffect(
+  useCallback(() => {
+    const handleBackPress = () => {
+      Alert.alert(
+        "Exit Kaarigar Expo?",
+        "Do you want to exit the app?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Exit",
+            style: "destructive",
+            onPress: () => BackHandler.exitApp(),
+          },
+        ]
+      );
+
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      handleBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [])
+);
 
   const fetchData = async () => {
     try {

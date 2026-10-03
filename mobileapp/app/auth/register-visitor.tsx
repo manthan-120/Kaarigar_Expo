@@ -3,6 +3,7 @@ import { useState } from "react";
 import KeyboardAvoider from "../../components/KeyboardAvoider";
 import usePasswordVisibility from "../../hooks/usePasswordVisibility";
 import { useAuth } from "../../hooks/useAuth";
+import { validateRegistration } from "../../utils/validation";
 import { Ionicons } from "@expo/vector-icons";
 import {
   Alert,
@@ -31,6 +32,13 @@ export default function VisitorRegisterScreen() {
       return;
     }
 
+    const validationError = validateRegistration(email, password);
+
+    if (validationError) {
+      Alert.alert("Invalid Details", validationError);
+      return;
+    }
+
     try {
       const data = await api("/auth/register", {
         method: "POST",
@@ -43,7 +51,7 @@ export default function VisitorRegisterScreen() {
       });
 
       await saveAuth(data);
-      
+
       Alert.alert("Registration Successful", data.message, [
         {
           text: "Continue",
@@ -116,7 +124,10 @@ export default function VisitorRegisterScreen() {
             placeholder="Create a password"
             placeholderTextColor="#A89B94"
             secureTextEntry={!showPassword}
-            className="flex-1 px-4 py-4"
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="password"
+            className="flex-1 px-4 py-4 text-black"
           />
 
           <Pressable

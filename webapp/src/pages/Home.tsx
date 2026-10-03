@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import CraftItem from "../components/CraftItem";
+import EventHeroCarousel from "../components/EventCarousel";
 export default function Home() {
   const { user, logout } = useAuth();
   const { events, loading: loadingEvents } = useEvents();
@@ -97,10 +98,10 @@ export default function Home() {
               </p>
 
               <h1 className="font-['Playfair_Display'] text-5xl font-semibold leading-[1.05] text-[#3b2923] sm:text-6xl lg:text-7xl">
-                Discover the
+                Kaarigar Expo -
                 <br />
                 <span className="text-[#c65d3a]">
-                  Art of India
+                  Goa Handicraft Events & Melas
                 </span>
               </h1>
 
@@ -124,6 +125,10 @@ export default function Home() {
                   Join as Kaarigar
                 </Link>
               </div>
+            </div>
+            {/* RIGHT SIDE CAROUSEL */}
+            <div className="absolute right-5 top-16 hidden w-[42%] max-w-xl md:block lg:right-8 lg:top-20">
+              <EventHeroCarousel events={events} />
             </div>
           </div>
         </section>

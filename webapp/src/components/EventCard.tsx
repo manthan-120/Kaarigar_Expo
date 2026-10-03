@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
+import { CalendarDays, MapPin } from "lucide-react";
 
 type EventCardProps = {
   id: string;
@@ -48,34 +49,34 @@ export default function EventCard({
      
       {/* Content */}
       <div className="p-6">
-
-        {/* Fees */}
-        <div className="mb-4 space-y-1 text-sm font-bold text-[#c65d3a]">
+         {/* Fees */}
+        <div className="mb-4 space-y-1 text-right text-sm font-bold text-[#c65d3a]">
           {(!role || role === "VISITOR" || role === "ADMIN") && (
-            <p>Visitor Fee: ₹{visitorFee}</p>
+            <p>Fee: ₹{visitorFee}</p>
           )}
           {(!role || role === "KAARIGAR" || role === "ADMIN") && (
-            <p>Kaarigar Fee: ₹{kaarigarFee}</p>
+            <p>Fee: ₹{kaarigarFee}</p>
           )}
         </div>
-
         {/* Title */}
         <h3 className="font-['Playfair_Display'] text-2xl font-semibold text-[#3b2923]">
           {title}
         </h3>
 
         {/* Date */}
-        <p className="mt-4 text-sm text-[#75665e]">
-          📅 {date}
-        </p>
+        <div className="mt-4 flex items-center gap-2 text-sm text-[#75665e]">
+          <CalendarDays size={16} strokeWidth={1.8} />
+          <span>{date}</span>
+        </div>
 
         {/* Location */}
-        <p className="mt-2 text-sm text-[#75665e]">
-          📍 {location}
-        </p>
+        <div className="mt-2 flex items-center gap-2 text-sm text-[#75665e]">
+          <MapPin size={16} strokeWidth={1.8} />
+          <span>{location}</span>
+        </div>
 
         {/* Description */}
-        <p className="mt-4 line-clamp-3 text-sm leading-6 text-[#75665e]">
+        <p className="mt-4 truncate text-sm leading-6 text-[#75665e]">
           {description}
         </p>
 

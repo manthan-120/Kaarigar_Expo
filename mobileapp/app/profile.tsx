@@ -33,14 +33,16 @@ export default function ProfileScreen() {
   return (
     <View className="flex-1 bg-[#FFF8EF]">
       <ScrollView
+        className="flex-1"
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingTop: 60,
-          paddingBottom: 40,
+          paddingBottom: 160,
         }}
+        showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity onPress={() => router.back()}>
-          <Text className="font-semibold text-[#C65D3A]">← Back</Text>
+          <Text className="font-semibold text-[#C65D3A]">Back</Text>
         </TouchableOpacity>
 
         <View className="mt-8 rounded-[22px] bg-[#3B2923] p-6">

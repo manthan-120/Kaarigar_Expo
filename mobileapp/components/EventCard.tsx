@@ -85,11 +85,12 @@ export default function EventCard({
       </View>
 
       {/* Description - fixed space */}
-      <View className="mt-3 h-[63px]">
+      <View className="mt-3">
         {event.description ? (
           <Text
-            numberOfLines={3}
-            className="text-[14px] leading-[21px] text-[#75665E]"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            className="text-[14px] text-[#75665E]"
           >
             {event.description}
           </Text>
@@ -125,7 +126,7 @@ export default function EventCard({
     return (
       <TouchableOpacity
         onPress={onPress}
-        className="mb-4 h-[500px] rounded-[18px] bg-white p-5"
+        className="mb-4 h-[450px] rounded-[18px] bg-white p-5"
         activeOpacity={0.8}
       >
         {content}

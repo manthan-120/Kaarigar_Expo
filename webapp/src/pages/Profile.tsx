@@ -27,7 +27,7 @@ export default function Profile() {
             onClick={() => navigate(-1)}
             className="mb-8 text-sm font-semibold text-[#75665e] transition hover:text-[#c65d3a]"
           >
-            ← Back
+            Back
           </button>
 
           <section className="overflow-hidden rounded-2xl border border-[#eaded2] bg-white shadow-sm">

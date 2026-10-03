@@ -1,42 +1,9 @@
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
-// export const api = async (
-//   endpoint: string,
-//   options: RequestInit = {}
-// ) => {
-//   const token = await AsyncStorage.getItem("token");
-
-//   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-//     ...options,
-//     headers: {
-//       "Content-Type": "application/json",
-
-//       ...(token
-//         ? {
-//             Authorization: `Bearer ${token}`,
-//           }
-//         : {}),
-
-//       ...(options.headers || {}),
-//     },
-//   });
-
-//   const data = await response.json();
-
-//   if (!response.ok) {
-//     throw new Error(data.message || "Something went wrong");
-//   }
-
-//   return data;
-// };
-
-
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = `${process.env.EXPO_PUBLIC_API_URL}/api`;
+const API_BASE_URL = `${process.env.EXPO_PUBLIC_API_URL?.replace(
+  /\/+$/,
+  ""
+)}/api`;
 
 export const api = async (
   endpoint: string,
@@ -45,22 +12,23 @@ export const api = async (
   const token = await AsyncStorage.getItem("token");
   const isFormData = options.body instanceof FormData;
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...(isFormData
-        ? {}
-        : { "Content-Type": "application/json" }),
+  let response: Response;
 
-      ...(token
-        ? {
-            Authorization: `Bearer ${token}`,
-          }
-        : {}),
-
-      ...(options.headers || {}),
-    },
-  });
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch (error) {
+    throw new Error(
+      "Unable to connect to the server. Check your internet connection and try again.",
+      { cause: error }
+    );
+  }
 
   const contentType = response.headers.get("content-type") || "";
   const data = contentType.includes("application/json")

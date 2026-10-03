@@ -109,7 +109,7 @@ export default function WelcomeScreen() {
 
         {/* Admin */}
         <TouchableOpacity
-          onPress={() => router.push("/admin/login")}
+          onPress={() => router.push("/auth/login?role=admin")}
           className="mt-7 flex-row items-center px-6 py-3"
         >
           <Ionicons

@@ -17,7 +17,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [role, setRole] = useState<RegisterRole>("VISITOR");
+  const [role, setRole] = useState<RegisterRole>("KAARIGAR");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -165,25 +165,6 @@ export default function Register() {
 
             <div className="grid gap-3 sm:grid-cols-2">
 
-              {/* Visitor */}
-              <button
-                type="button"
-                onClick={() => handleRoleChange("VISITOR")}
-                className={`rounded-xl border p-4 text-left transition ${
-                  role === "VISITOR"
-                    ? "border-[#c65d3a] bg-[#c65d3a]/5 ring-2 ring-[#c65d3a]/10"
-                    : "border-[#eaded2] bg-white hover:border-[#d9c9bd]"
-                }`}
-              >
-                <strong className="block text-sm font-semibold text-[#3b2923]">
-                  Visitor
-                </strong>
-
-                <span className="mt-1 block text-xs leading-5 text-[#75665e]">
-                  Explore events and register
-                </span>
-              </button>
-
               {/* Kaarigar */}
               <button
                 type="button"
@@ -203,6 +184,24 @@ export default function Register() {
                 </span>
               </button>
 
+              {/* Visitor */}
+              <button
+                type="button"
+                onClick={() => handleRoleChange("VISITOR")}
+                className={`rounded-xl border p-4 text-left transition ${
+                  role === "VISITOR"
+                    ? "border-[#c65d3a] bg-[#c65d3a]/5 ring-2 ring-[#c65d3a]/10"
+                    : "border-[#eaded2] bg-white hover:border-[#d9c9bd]"
+                }`}
+              >
+                <strong className="block text-sm font-semibold text-[#3b2923]">
+                  Visitor
+                </strong>
+
+                <span className="mt-1 block text-xs leading-5 text-[#75665e]">
+                  Explore events and register
+                </span>
+              </button>
             </div>
           </div>
 

@@ -5,6 +5,7 @@ import KeyboardAvoider from "../../components/KeyboardAvoider";
 import { Ionicons } from "@expo/vector-icons";
 import usePasswordVisibility from "../../hooks/usePasswordVisibility";
 import { useAuth } from "../../hooks/useAuth";
+import { validateRegistration } from "../../utils/validation";
 import {
   Alert,
   Pressable,
@@ -31,6 +32,13 @@ export default function KaarigarRegisterScreen() {
   const handleRegister = async () => {
   if (!name || !email || !craftType || !description || !password) {
     Alert.alert("Missing Details", "Please fill all fields.");
+    return;
+  }
+
+  const validationError = validateRegistration(email, password);
+
+  if (validationError) {
+    Alert.alert("Invalid Details", validationError);
     return;
   }
 
@@ -165,7 +173,10 @@ export default function KaarigarRegisterScreen() {
             placeholder="Create a password"
             placeholderTextColor="#A89B94"
             secureTextEntry={!showPassword}
-            className="flex-1 px-4 py-4"
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="password"
+            className="flex-1 px-4 py-4 text-black"
           />
 
           <Pressable

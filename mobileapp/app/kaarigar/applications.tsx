@@ -77,9 +77,9 @@ export default function KaarigarApplicationsScreen() {
   return (
     <View className="flex-1 bg-[#FFF8EF]">
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 60, paddingBottom: 40 }}>
-        <Text onPress={() => router.back()} className="font-semibold text-[#C65D3A]">← Back</Text>
-        <Text className="mt-7 text-[28px] font-extrabold text-[#C65D3A]">My Applications</Text>
-        <Text className="mt-2 text-[14px] text-[#75665E]">Track your mela applications and participation payments.</Text>
+        <Text onPress={() => router.back()} className="font-semibold text-[#C65D3A]">Back</Text>
+        <Text className="mt-7 text-[22px] font-extrabold text-[#C65D3A]">My Applications</Text>
+        <Text className="mt-2 text-[13px] text-[#75665E]">Track your mela applications and participation payments.</Text>
 
         {loading ? (
           <View className="items-center py-12">
