@@ -98,10 +98,10 @@ export default function Home() {
               </p>
 
               <h1 className="font-['Playfair_Display'] text-5xl font-semibold leading-[1.05] text-[#3b2923] sm:text-6xl lg:text-7xl">
-                Kaarigar Expo -
+                Discover the
                 <br />
                 <span className="text-[#c65d3a]">
-                  Goa Handicraft Events & Melas
+                  Art of India
                 </span>
               </h1>
 
